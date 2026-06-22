@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reachyn — sua máquina de conteúdo com IA | pesquisa, criação e publicação</title>
+<meta name="description" content="Pesquise um tema, gere texto, imagem e vídeo prontos para cada rede, aprove com um clique e publique em todas as plataformas — no piloto automático, com a sua marca." />
+<meta name="keywords" content="criação de conteúdo com IA, gerador de conteúdo redes sociais, automação de redes sociais, criar posts com IA, gerar vídeo com IA, publicar em várias redes" />
+<link rel="canonical" href="https://example.com/" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="theme-color" content="#e24a31" />
+<meta name="robots" content="index, follow" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Reachyn" />
+<meta property="og:url" content="https://example.com/" />
+<meta property="og:title" content="Reachyn — sua máquina de conteúdo com IA" />
+<meta property="og:description" content="Da pesquisa à publicação em todas as redes, no piloto automático e com a sua marca." />
+<meta name="twitter:card" content="summary_large_image" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Reachyn",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Cloud",
+  "url": "https://example.com/",
+  "description": "Plataforma de produção de conteúdo com IA: pesquisa, geração de texto/imagem/vídeo por plataforma, aprovação e publicação multi-rede."
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#141110; --panel:rgba(255,255,255,.025); --line:rgba(255,255,255,.08);
+    --txt:#efe7e2; --muted:#9d938b; --red:#e24a31; --red-l:#ffb4a6; --amber:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--txt);line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .orb{position:fixed;border-radius:50%;filter:blur(90px);opacity:.5;z-index:0;pointer-events:none}
+  .orb.a{width:520px;height:520px;background:#b8321f;top:-180px;left:-120px;animation:f1 18s ease-in-out infinite}
+  .orb.b{width:440px;height:440px;background:#7c2d12;top:120px;right:-160px;animation:f2 22s ease-in-out infinite}
+  .orb.c{width:380px;height:380px;background:#9a3412;bottom:-120px;left:30%;opacity:.3;animation:f1 26s ease-in-out infinite}
+  @keyframes f1{50%{transform:translate(40px,60px) scale(1.1)}}
+  @keyframes f2{50%{transform:translate(-50px,40px) scale(1.05)}}
+  body::after{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;position:relative;z-index:2}
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(20,17,16,.6);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:1080px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;letter-spacing:-.02em}
+  .mark{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 140deg,var(--red),var(--red-l),#fff3,var(--red));box-shadow:0 0 22px -2px var(--red)}
+  .nav-links a{color:var(--muted);text-decoration:none;margin-left:26px;font-size:14px;font-weight:500;transition:.15s}
+  .nav-links a:hover{color:var(--txt)}
+  .nav-cta{margin-left:26px!important;color:var(--txt)!important;border:1px solid var(--line);padding:8px 16px;border-radius:9px}
+  .nav-cta:hover{border-color:var(--red)}
+  .hero{padding:96px 0 50px;text-align:center}
+  .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);font-size:13px;color:var(--red-l);padding:7px 15px;border-radius:999px;margin-bottom:30px;font-weight:500}
+  .pill .live{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.4}}
+  h1{font-size:clamp(40px,7vw,74px);line-height:1.02;letter-spacing:-.035em;font-weight:800}
+  .grad{background:linear-gradient(110deg,var(--red-l) 10%,var(--red) 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{max-width:610px;margin:24px auto 0;color:var(--muted);font-size:clamp(16px,2.3vw,20px);font-weight:400}
+  .cta{display:flex;gap:13px;justify-content:center;margin-top:38px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;font-weight:600;font-size:15px;text-decoration:none;transition:.18s;border:1px solid transparent;font-family:inherit;cursor:pointer}
+  .btn.p{background:linear-gradient(135deg,var(--red),#b8321f);color:#fff;box-shadow:0 10px 40px -12px var(--red)}
+  .btn.p:hover{transform:translateY(-2px);box-shadow:0 14px 50px -10px var(--red)}
+  .btn.s{border-color:var(--line);color:var(--txt);background:var(--panel)}
+  .btn.s:hover{border-color:var(--red)}
+  /* preview card */
+  .code-wrap{margin:70px auto 0;max-width:620px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:rgba(30,24,21,.7);backdrop-filter:blur(8px);box-shadow:0 30px 80px -30px #000;text-align:left}
+  .code-bar{display:flex;align-items:center;gap:7px;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .code-bar i{width:11px;height:11px;border-radius:50%;background:#3a2f29}
+  .code-bar span{margin-left:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px}
+  .flow{padding:22px 24px;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.95}
+  .flow .step-l{color:var(--muted)} .flow .v{color:var(--red-l)} .flow .ok{color:#86efac}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:90px 0}
+  .stat{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:28px 22px;text-align:center}
+  .stat .n{font-size:30px;font-weight:780;letter-spacing:-.03em;background:linear-gradient(120deg,#fff,var(--red-l));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .l{color:var(--muted);font-size:13.5px;margin-top:6px}
+  .reveal{opacity:0;transform:translateY(24px);transition:.7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .sec-h{text-align:center;margin:0 auto 44px;max-width:580px}
+  .sec-h h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.03em;font-weight:760}
+  .sec-h p{color:var(--muted);margin-top:12px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:100px}
+  .card{border:1px solid var(--line);border-radius:18px;padding:28px;background:var(--panel);transition:.2s}
+  .card:hover{border-color:rgba(226,74,49,.4);transform:translateY(-3px)}
+  .ic{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,rgba(226,74,49,.2),rgba(255,180,166,.12));display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:20px}
+  .card h3{font-size:18px;margin-bottom:9px;letter-spacing:-.01em}
+  .card p{color:var(--muted);font-size:14.5px}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:100px}
+  .step{border:1px solid var(--line);border-radius:18px;padding:26px;background:var(--panel)}
+  .step .num{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--red),#b8321f);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;margin-bottom:16px}
+  .step h3{font-size:17px;margin-bottom:8px;letter-spacing:-.01em}
+  .step p{color:var(--muted);font-size:13.5px}
+  .platforms{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:-60px 0 100px}
+  .platforms span{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:8px 16px;font-size:13.5px;color:#cabfb8}
+  .prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:100px;align-items:stretch}
+  .price{border:1px solid var(--line);border-radius:18px;padding:28px 24px;background:var(--panel);display:flex;flex-direction:column;transition:.2s}
+  .price:hover{border-color:rgba(226,74,49,.4);transform:translateY(-3px)}
+  .price.feat{border-color:rgba(226,74,49,.55);box-shadow:0 24px 70px -34px var(--red)}
+  .price .tag{align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--red-l);background:rgba(226,74,49,.14);border:1px solid rgba(226,74,49,.3);padding:3px 9px;border-radius:999px;margin-bottom:12px;min-height:22px}
+  .price h3{font-size:18px;letter-spacing:-.01em}
+  .price .amt{font-size:34px;font-weight:780;margin:8px 0 2px;letter-spacing:-.02em}
+  .price .amt span{font-size:14px;color:var(--muted);font-weight:500}
+  .price ul{list-style:none;margin:18px 0 0;padding:0;flex:1}
+  .price li{color:var(--muted);font-size:13.5px;padding:7px 0;display:flex;gap:9px;align-items:flex-start}
+  .price li::before{content:"✓";color:var(--red-l);font-weight:700}
+  .price .btn{margin-top:24px;justify-content:center;width:100%;box-sizing:border-box;padding:12px 20px}
+  details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px}
+  summary{cursor:pointer;font-weight:600;color:var(--txt);list-style:none}
+  details p{color:var(--muted);margin-top:10px;font-size:14.5px}
+  .final{text-align:center;padding:40px 0 90px}
+  .final h2{font-size:clamp(30px,5vw,48px);letter-spacing:-.03em;font-weight:800}
+  footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;padding:54px 0 34px}
+  .foot-grid .col-brand p{margin-top:12px;max-width:260px;line-height:1.6}
+  .foot-grid h4{font-size:12px;color:var(--txt);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .foot-grid a{display:block;color:var(--muted);font-size:13.5px;text-decoration:none;padding:4px 0}
+  .foot-grid a:hover{color:var(--txt)}
+  .foot-bottom{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:22px 0 60px;border-top:1px solid var(--line)}
+  .cur-toggle{display:flex;justify-content:center;gap:8px;margin:-14px 0 30px}
+  .cur-btn{cursor:pointer;font:inherit;font-size:13px;font-weight:600;padding:6px 16px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--muted);transition:.15s}
+  @media(max-width:880px){.prices,.steps{grid-template-columns:repeat(2,1fr)}.foot-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:760px){.grid,.stats{grid-template-columns:1fr}.nav-links a:not(.nav-cta){display:none}}
+  @media(max-width:480px){.prices,.steps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
+
+<nav><div class="nav-in">
+  <div class="logo"><span class="mark"></span> Reachyn</div>
+  <div class="nav-links">
+    <a href="#how">Como funciona</a>
+    <a href="#recursos">Recursos</a>
+    <a href="#faq">FAQ</a>
+    <a href="https://app.example.com/app/login" class="nav-cta">Entrar</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <section class="hero">
+    <span class="pill"><span class="live"></span> Conteúdo com IA, com a sua marca</span>
+    <h1>Sua máquina de conteúdo<br/>que <span class="grad">publica sozinha.</span></h1>
+    <p class="sub">Pesquise um tema, gere texto, imagem e vídeo prontos para cada rede, aprove com um clique e publique em todas as plataformas — num só lugar.</p>
+    <div class="cta">
+      <a href="https://app.example.com/app/login" class="btn p">Começar agora →</a>
+      <a href="#how" class="btn s">Ver como funciona</a>
+    </div>
+
+    <div class="code-wrap reveal">
+      <div class="code-bar"><i></i><i></i><i></i><span>reachyn — do tema ao post</span></div>
+      <div class="flow">
+        <div><span class="step-l">tema</span> → <span class="v">"tendências de marketing com IA em 2026"</span></div>
+        <div><span class="step-l">pesquisa</span> → resumo + fontes <span class="ok">✓</span></div>
+        <div><span class="step-l">texto</span> → LinkedIn, Instagram, X… <span class="ok">✓</span></div>
+        <div><span class="step-l">mídia</span> → imagem + vídeo no estúdio <span class="ok">✓</span></div>
+        <div><span class="step-l">publicar</span> → 7 redes conectadas <span class="ok">✓</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats reveal">
+    <div class="stat"><div class="n">texto · imagem · vídeo</div><div class="l">tudo numa plataforma</div></div>
+    <div class="stat"><div class="n">7 plataformas</div><div class="l">publique de uma vez só</div></div>
+    <div class="stat"><div class="n">aprovar → publicar</div><div class="l">no piloto automático</div></div>
+  </section>
+
+  <section id="recursos">
+    <div class="sec-h reveal"><h2>Tudo que você precisa pra crescer</h2><p>Texto, mídia e publicação — numa plataforma só, com a voz da sua marca.</p></div>
+    <div class="grid">
+      <div class="card reveal"><div class="ic">✍️</div><h3>Conteúdo</h3><p>Pesquisa inteligente e textos no tom certo para cada plataforma — LinkedIn, Instagram, blog e mais.</p></div>
+      <div class="card reveal"><div class="ic">🎬</div><h3>Estúdio de mídia</h3><p>Imagens, vídeos curtos e longos, cortes de vídeo em shorts, dublagem e voz clonada.</p></div>
+      <div class="card reveal"><div class="ic">🚀</div><h3>Publicação multi-rede</h3><p>Aprove e publique direto nas suas contas conectadas, com fila de aprovação e histórico.</p></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="sec-h reveal"><h2>Da ideia ao post publicado</h2><p>Um fluxo simples que faz o trabalho pesado por você.</p></div>
+    <div class="steps reveal">
+      <div class="step"><div class="num">1</div><h3>Pesquise</h3><p>Escolha um tema e a IA reúne as melhores fontes e monta um resumo acionável.</p></div>
+      <div class="step"><div class="num">2</div><h3>Crie</h3><p>Gere o texto sob medida para cada rede, mais imagens e vídeos no estúdio.</p></div>
+      <div class="step"><div class="num">3</div><h3>Aprove</h3><p>Revise tudo na fila de aprovação. Edite à vontade ou aprove com um clique.</p></div>
+      <div class="step"><div class="num">4</div><h3>Publique</h3><p>Publique nas suas redes conectadas, sem copiar e colar em cada uma.</p></div>
+    </div>
+    <div class="platforms reveal">
+      <span>LinkedIn</span><span>Instagram</span><span>Facebook</span><span>X / Twitter</span><span>YouTube</span><span>Threads</span><span>Blog</span>
+    </div>
+  </section>
+
+  <section id="usecases">
+    <div class="sec-h reveal"><h2>Feito pra quem vive de conteúdo</h2><p>Se a sua marca precisa estar presente, o Reachyn produz por você.</p></div>
+    <div class="grid">
+      <div class="card reveal"><div class="ic">🎥</div><h3>Criadores</h3><p>Mantenha a régua de posts em todas as redes sem passar o dia inteiro criando.</p></div>
+      <div class="card reveal"><div class="ic">🏢</div><h3>Agências</h3><p>Atenda mais clientes com menos esforço — cada um com a sua marca e suas redes.</p></div>
+      <div class="card reveal"><div class="ic">📈</div><h3>Social media</h3><p>Pesquisa, texto, arte e agendamento num fluxo só, com aprovação antes de publicar.</p></div>
+      <div class="card reveal"><div class="ic">🛍️</div><h3>E-commerce</h3><p>Gere conteúdo de produto e campanhas para várias redes em escala.</p></div>
+      <div class="card reveal"><div class="ic">🎓</div><h3>Infoprodutores</h3><p>Transforme um tema em uma semana de posts, vídeos e cortes prontos.</p></div>
+      <div class="card reveal"><div class="ic">✨</div><h3>Sua marca</h3><p>Voz, estilo e identidade consistentes em tudo que sai — no automático.</p></div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="sec-h reveal"><h2>Perguntas frequentes</h2></div>
+    <div class="reveal" style="max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px">
+      <details><summary>O que é o Reachyn?</summary><p>Uma plataforma que produz conteúdo com IA do começo ao fim: pesquisa um tema, gera texto, imagem e vídeo para cada rede, e publica nas suas contas — tudo num só lugar.</p></details>
+      <details><summary>Preciso entender de tecnologia?</summary><p>Não. Você escolhe o tema, revisa o que a IA criou e aprova. O Reachyn cuida do resto.</p></details>
+      <details><summary>Em quais redes posso publicar?</summary><p>LinkedIn, Instagram, Facebook, X/Twitter, YouTube, Threads e blog — conectando suas contas com poucos cliques.</p></details>
+      <details><summary>Posso editar o que a IA gera?</summary><p>Sim. Tudo passa por uma fila de aprovação onde você edita o texto, troca a imagem ou regenera antes de publicar.</p></details>
+      <details><summary>Como funciona a cobrança?</summary><p>Assinatura mensal por plano (Starter, Pro ou Studio), com cotas de imagens e vídeos. Você pode trocar de plano ou cancelar quando quiser.</p></details>
+    </div>
+  </section>
+
+  <section class="final reveal">
+    <h2>Pare de criar conteúdo <span class="grad">no manual.</span></h2>
+    <p class="sub">Entre no Reachyn e leve sua presença digital pro próximo nível.</p>
+    <div class="cta">
+      <a href="https://app.example.com/app/login" class="btn p">Acessar o aplicativo →</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot-grid">
+      <div class="col-brand">
+        <div class="logo" style="font-size:16px"><span class="mark" style="width:20px;height:20px"></span> Reachyn</div>
+        <p>Sua máquina de conteúdo com IA — da pesquisa à publicação, em todas as redes, com a sua marca.</p>
+        <div style="display:flex;gap:18px;margin-top:14px;flex-wrap:wrap">
+          <a href="https://www.instagram.com/" target="_blank" rel="me noopener">Instagram</a>
+          <a href="https://www.youtube.com/" target="_blank" rel="me noopener">YouTube</a>
+          <a href="https://www.linkedin.com/" target="_blank" rel="me noopener">LinkedIn</a>
+          <a href="https://x.com/" target="_blank" rel="me noopener">X</a>
+        </div>
+      </div>
+      <div>
+        <h4>Produto</h4>
+        <a href="#how">Como funciona</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#faq">Dúvidas</a>
+      </div>
+      <div>
+        <h4>Conta</h4>
+        <a href="https://app.example.com/app/login">Entrar</a>
+        <a href="mailto:contato@example.com">Contato</a>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <a href="#">Termos de uso</a>
+        <a href="#">Privacidade</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Reachyn.</span>
+      <span>contato@example.com</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

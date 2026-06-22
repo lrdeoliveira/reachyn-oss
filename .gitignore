@@ -1,0 +1,29 @@
+# reachyn-mono
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# console (Laravel)
+/console/vendor
+/console/node_modules
+/console/public/build
+/console/public/hot
+/console/storage/*.key
+/console/.phpunit.cache
+
+# engine (Go)
+/engine/bin
+/engine/reachyn
+*.test
+
+# web (Next.js)
+/web/node_modules
+/web/.next
+/web/out
+/web/next-env.d.ts
+
+# python
+__pycache__/
+*.pyc

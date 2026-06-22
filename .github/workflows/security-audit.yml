@@ -1,0 +1,109 @@
+# ============================================================================
+# security-audit.yml — Pipeline de segurança contínua (AUD-018)
+# Framework de Auditoria de Segurança v1.2 — adaptado para o monorepo reachyn-mono
+# (console/ Laravel · web/ Next.js · engine/ Go · media/ffmpeg-service Python).
+#
+# Repo PRIVADO sem GitHub Advanced Security → NÃO há upload de SARIF / Code
+# Scanning (exigiria GHAS pago). Os scanners rodam como gates/relatório direto:
+#   - Semgrep    (SAST)            -> relatório no log (informativo)
+#   - Trivy      (SCA+IaC+secret)  -> GATE: quebra o build em CRITICAL (fixável)
+#   - Gitleaks   (segredos)        -> GATE: quebra o build se vazar segredo
+#   - osv-scanner (deps, recursivo)-> relatório (go.mod, package-lock, composer.lock, requirements)
+#   - npm audit  (web/)            -> relatório (informativo)
+#
+# Requisitos: nenhum segredo obrigatório. Para regras premium do Semgrep,
+# defina o secret SEMGREP_APP_TOKEN (opcional).
+# ============================================================================
+
+name: security-audit
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # toda segunda 06:00 UTC (varredura semanal)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read            # exigido pelo reusable workflow do osv-scanner
+  security-events: write   # idem: o reusable declara essa permissão (caller precisa conceder)
+  pull-requests: read      # gitleaks-action lista os commits do PR via API (senão: 403)
+
+concurrency:
+  group: security-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------ SAST
+  semgrep:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Semgrep scan (informativo)
+        run: semgrep scan --config auto || true   # relatório no log; não bloqueia
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}   # opcional
+
+  # ----------------------------------------------------------- SCA + IaC
+  trivy:
+    name: SCA / IaC (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Trivy gate (falha em CRITICAL fixável)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL
+          exit-code: "1"            # quebra o build se houver CRITICAL
+          ignore-unfixed: true
+
+  # --------------------------------------------------------------- Segredos
+  gitleaks:
+    name: Segredos (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0           # histórico completo para varrer commits
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ------------------------------------------------------- SCA (OSV) deps
+  # Recursivo: cobre engine/go.mod, web/package-lock.json, console/composer.lock,
+  # media/ffmpeg-service/requirements.txt automaticamente. Sem upload SARIF
+  # (repo privado sem GHAS) e informativo (não bloqueia por vuln de dep).
+  osv-scanner:
+    name: Dependências (osv-scanner)
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.8
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    with:
+      upload-sarif: false
+      fail-on-vuln: false
+      scan-args: |-
+        --recursive
+        ./
+
+  # ----------------------------------------------- npm audit (front web/)
+  # Usa o registry oficial fixado em web/.npmrc (AUD-016). Informativo.
+  npm-audit:
+    name: npm audit (web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: npm audit (relatório, gate em HIGH)
+        working-directory: web
+        run: npm audit --audit-level=high || true   # relatório; não bloqueia

@@ -1,0 +1,67 @@
+# reachyn-mono — DEV LOCAL (Docker Desktop), com HOT-RELOAD.
+# Recorte do stack: só o app (postgres + console + engine + web).
+# Código montado por bind mount → editar local reflete no container sem rebuild.
+# Produção (VPS) usa o docker-compose.yml completo (Scality/Windmill/Traefik).
+# Subir:  docker compose -f docker-compose.dev.yml up -d --build
+name: reachyn-dev
+
+networks:
+  reachyn-dev:
+
+volumes:
+  pg-data-dev:
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reachyn}
+      POSTGRES_USER: ${POSTGRES_USER:-reachyn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reachyn-dev}   # AUD-029: senha só de DEV (nunca usar em prod)
+    volumes:
+      - pg-data-dev:/var/lib/postgresql/data
+    # AUD-029: bind só em loopback (127.0.0.1) — não expor o postgres dev em 0.0.0.0 (LAN/internet).
+    ports: ["127.0.0.1:5433:5432"]   # 5433 p/ não conflitar com pg local
+    networks: [reachyn-dev]
+
+  console:                         # Laravel/Filament — hot-reload (php artisan serve relê a cada request)
+    build: ./console
+    command: sh -c "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
+    env_file: .env
+    depends_on: [postgres]
+    ports: ["127.0.0.1:8210:8000"]   # AUD-029: dev só em loopback
+    volumes:
+      - ./console:/app
+      - /app/vendor                # preserva vendor da imagem (--no-dev), não o do host
+      - /app/bootstrap/cache       # idem cache de pacotes (sem dev-deps como Pail)
+    networks: [reachyn-dev]
+
+  worker:                          # fila Laravel (dublagem e jobs assíncronos de mídia)
+    build: ./console
+    command: php artisan queue:work --tries=1 --timeout=1300
+    env_file: .env
+    depends_on: [postgres]
+    volumes:
+      - ./console:/app
+      - /app/vendor
+      - /app/bootstrap/cache
+    networks: [reachyn-dev]
+
+  engine:                          # Go — sem ports (interno, console alcança via engine:8080)
+    build: ./engine
+    env_file: .env
+    depends_on: [postgres]
+    networks: [reachyn-dev]
+
+  web:                             # Next.js — next dev (hot-reload) na 3000, exposto em 3210
+    build: ./web
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_CONSOLE_URL: http://localhost:8210
+    depends_on: [console, engine]
+    ports: ["127.0.0.1:3210:3000"]   # AUD-029: dev só em loopback
+    volumes:
+      - ./web:/app
+      - /app/node_modules          # preserva node_modules da imagem (alpine), não o do host
+    networks: [reachyn-dev]

@@ -1,0 +1,224 @@
+# reachyn-mono — orquestração local/VPS.
+# Estrutura Reachyn (tudo na reachyn-net):
+#   console (Laravel+Filament) · engine (Go) · web (Next.js)
+#   · MÍDIA (ffmpeg-service + Scality) · AUTOMAÇÃO (Windmill + workers) · Postgres
+# A automação (agenda/gatilhos/encadear geração→aprovação→publish) vive no Windmill,
+# que chama o engine Go via HTTP. O engine NÃO substitui o Windmill — só o script de geração.
+name: reachyn
+
+networks:
+  reachyn-net:
+    name: reachyn-net   # rede compartilhada de TODOS os subsistemas da Reachyn
+  traefik:
+    external: true      # rede do traefik-wnou (roteamento público/TLS) — só web+console entram nela
+
+volumes:
+  pg-data:
+  # Storage Scality TRAZIDO de volta pra stack (2026-06-20). Volumes EXTERNAL apontando pros
+  # dados VIVOS criados pela stack `scality` (/docker/scality) — preserva o acervo (não recria).
+  # São os volumes reais `scality_scality-data` (objetos) e `scality_scality-meta` (metadados).
+  scality-data:
+    external: true
+    name: scality_scality-data
+  scality-meta:
+    external: true
+    name: scality_scality-meta
+  # media_minio_data (volume do Scality AGPL antigo) preservado fora do compose como rollback histórico.
+
+services:
+  landing:           # site institucional — estático nginx
+    build: ./landing
+    restart: unless-stopped
+    networks: [traefik]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.reachyn-landing.entrypoints=websecure
+      - traefik.http.routers.reachyn-landing.rule=Host(`example.com`) || Host(`www.example.com`)
+      - traefik.http.routers.reachyn-landing.tls.certresolver=letsencrypt
+      - traefik.http.routers.reachyn-landing.middlewares=reachyn-sec@docker   # AUD-027: security headers (HSTS/nosniff/frameDeny/referrer)
+      - traefik.http.services.reachyn-landing.loadbalancer.server.port=80
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reachyn}
+      POSTGRES_USER: ${POSTGRES_USER:-reachyn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}   # AUD-017: fail-closed (sem fallback 'change-me')
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks: [reachyn-net]
+
+  console:           # Laravel + Filament (identidade, multi-tenant, back-office)
+    build: ./console
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [postgres]
+    # AUD-001: SEM publicação de porta no host (era ["8210:8000"], exposto à internet por HTTP puro).
+    #   O console entra na rede traefik e é roteado por TLS via labels abaixo — não precisa de ports:.
+    #   Para debug local, descomente bindando SÓ em loopback:
+    # ports: ["127.0.0.1:8210:8000"]
+    networks: [reachyn-net, traefik]
+    labels:
+      # Domínio único: o console responde nos paths de backend/painel; o resto vai pro web.
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.reachyn-console.entrypoints=websecure
+      - traefik.http.routers.reachyn-console.rule=Host(`app.example.com`) && (PathPrefix(`/api`) || PathPrefix(`/app`) || PathPrefix(`/admin`) || PathPrefix(`/studio-sso`) || PathPrefix(`/livewire`) || PathPrefix(`/filament`) || PathPrefix(`/js/filament`) || PathPrefix(`/css/filament`) || PathPrefix(`/fonts/filament`) || PathPrefix(`/storage`) || PathPrefix(`/sanctum`) || PathPrefix(`/logout`) || PathPrefix(`/connect`))
+      - traefik.http.routers.reachyn-console.priority=100
+      - traefik.http.routers.reachyn-console.tls.certresolver=letsencrypt
+      # AUD-010 (security headers) + AUD-015 (CSP do painel Filament).
+      # A CSP `reachyn-csp-console` é aplicada SÓ aqui (router do console), separada da CSP do
+      # web (definida no next.config.ts), para não haver conflito de políticas entre as origens.
+      - traefik.http.routers.reachyn-console.middlewares=reachyn-sec@docker,reachyn-csp-console@docker
+      - traefik.http.services.reachyn-console.loadbalancer.server.port=8000
+
+  worker:            # fila Laravel (dublagem e jobs assíncronos de mídia)
+    build: ./console
+    restart: unless-stopped
+    command: php artisan queue:work --tries=1 --timeout=1300
+    env_file: .env
+    depends_on: [postgres]
+    networks: [reachyn-net]
+
+  scheduler:         # Laravel scheduler — dispara as tarefas agendadas em routes/console.php
+    build: ./console #   a cada minuto (schedule:work).
+    command: php artisan schedule:work
+    env_file: .env
+    depends_on: [postgres]
+    networks: [reachyn-net]
+    restart: unless-stopped
+
+  engine:            # Go — geração de conteúdo + jobs de mídia + providers
+    build: ./engine
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [postgres]
+    # AUD-001: SEM publicação de porta no host (era ["8080:8080"], expunha o engine de geração
+    #   SEM auth à internet — ver AUD-002). O engine é interno: só o console/web o chamam pela
+    #   reachyn-net por nome de serviço (engine:8080). Para debug local: ["127.0.0.1:8080:8080"].
+    networks: [reachyn-net]
+
+  web:               # Next.js — Conteúdo + Studio (chama só o console; engine fica interno)
+    restart: unless-stopped
+    build:
+      context: ./web
+      args:
+        # Domínio único → mesma origem → chamadas relativas (vazio). Override só em dev.
+        NEXT_PUBLIC_CONSOLE_URL: ${NEXT_PUBLIC_CONSOLE_URL:-}
+    env_file: .env
+    depends_on: [console, engine]
+    # AUD-001: SEM publicação de porta no host (era ["3210:3210"], exposto à internet por HTTP puro).
+    #   O web entra na rede traefik e é roteado por TLS via labels abaixo. Debug: ["127.0.0.1:3210:3210"].
+    networks: [reachyn-net, traefik]
+    labels:
+      # Catch-all do domínio: tudo que não casar com o console cai aqui (web).
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.reachyn-web.entrypoints=websecure
+      - traefik.http.routers.reachyn-web.rule=Host(`app.example.com`)
+      - traefik.http.routers.reachyn-web.priority=1
+      - traefik.http.routers.reachyn-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.reachyn-web.middlewares=reachyn-sec@docker   # AUD-010: security headers
+      - traefik.http.services.reachyn-web.loadbalancer.server.port=3210
+      # ───────── AUD-010: middleware de security headers (compartilhado web+console) ─────────
+      # Definido aqui (no serviço web) e referenciado por @docker nos routers reachyn-web/reachyn-console.
+      - traefik.http.middlewares.reachyn-sec.headers.frameDeny=true
+      - traefik.http.middlewares.reachyn-sec.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.reachyn-sec.headers.browserXssFilter=true
+      - traefik.http.middlewares.reachyn-sec.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.reachyn-sec.headers.stsSeconds=31536000
+      - traefik.http.middlewares.reachyn-sec.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.reachyn-sec.headers.stsPreload=true
+      # ───────── AUD-015: CSP do painel Filament (console) ─────────
+      # Definida aqui (no serviço web, junto do reachyn-sec) mas aplicada SÓ no router
+      # reachyn-console (não no web — o web tem CSP própria no next.config.ts).
+      # Filament usa Alpine.js ('unsafe-eval') + scripts/estilos inline ('unsafe-inline').
+      # img-src libera o S3 da mídia. Ajuste fino pode ser necessário testando o painel
+      # (ex.: se algum asset/CDN externo for adicionado, incluí-lo no connect-src/script-src).
+      - "traefik.http.middlewares.reachyn-csp-console.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://s3.example.com; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+
+  # ───────── AUTOMAÇÃO — Windmill APOSENTADO (2026-06-13) ─────────
+  # O sistema novo não usa Windmill: geração = engine Go; fila de aprovação e publish = nativos
+  # no console. Containers parados/removidos. O DB `windmill` (flows antigos) ficou preservado
+  # no postgres — apagar é passo destrutivo separado, com backup. Reativar = restaurar estes
+  # serviços do git e `docker compose up -d windmill windmill-worker windmill-worker-video`.
+
+  # ───────── MÍDIA — storage S3 (Zenko CloudServer, Apache-2.0) ─────────
+  # Scality TRAZIDO de volta pra stack do reachyn em 2026-06-20 (estava em /docker/scality
+  # desde 2026-06-16). Storage usado SÓ pelo reachyn — agora gerenciado junto com o resto.
+  # Os volumes são `external` (ver seção volumes:) → o acervo vivo é preservado intacto.
+  scality:           # Zenko CloudServer (S3-compatível) — servidor de objetos da mídia
+    image: zenko/cloudserver@sha256:b53e57829cf7df357323e60a19c9f98d2218f1b7ccb1d7cea5761a5a227a9ee3
+    container_name: scality-s3
+    environment:
+      S3BACKEND: file
+      REMOTE_MANAGEMENT_DISABLE: "1"
+      ENDPOINT: "s3.example.com,scality-s3,localhost,127.0.0.1"
+      # Reusa as MESMAS credenciais já no .env (S3_KEY/S3_SECRET) — o servidor as DEFINE e
+      # o cliente (console/ffmpeg) as USA; valores idênticos, sem duplicar segredo.
+      SCALITY_ACCESS_KEY_ID: ${S3_KEY:?defina S3_KEY}
+      SCALITY_SECRET_ACCESS_KEY: ${S3_SECRET:?defina S3_SECRET}
+    volumes:
+      - scality-data:/usr/src/app/localData       # external: scality_scality-data (objetos)
+      - scality-meta:/usr/src/app/localMetadata   # external: scality_scality-meta (metadados)
+    networks: [reachyn-net, traefik]
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - "traefik.http.routers.reachyn-s3.rule=Host(`s3.example.com`)"
+      - traefik.http.routers.reachyn-s3.entrypoints=websecure
+      - traefik.http.routers.reachyn-s3.tls.certresolver=letsencrypt
+      - traefik.http.routers.reachyn-s3.service=reachyn-s3
+      - traefik.http.services.reachyn-s3.loadbalancer.server.port=8000
+
+  gallery:           # UI Flask read-only do acervo (media.example.com, restrito por IP)
+    build: ./media/gallery
+    container_name: scality-gallery
+    environment:
+      S3_ENDPOINT: http://scality-s3:8000
+      PUBLIC_BASE: https://s3.example.com/public
+      S3_BUCKET: public
+      S3_PREFIX: reachyn/
+      S3_ACCESS_KEY: ${S3_KEY:?defina S3_KEY}
+      S3_SECRET_KEY: ${S3_SECRET:?defina S3_SECRET}
+    depends_on: [scality]
+    networks: [reachyn-net, traefik]
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - "traefik.http.routers.reachyn-media.rule=Host(`media.example.com`)"
+      - traefik.http.routers.reachyn-media.entrypoints=websecure
+      - traefik.http.routers.reachyn-media.tls.certresolver=letsencrypt
+      - traefik.http.routers.reachyn-media.service=reachyn-media
+      - traefik.http.services.reachyn-media.loadbalancer.server.port=8080
+      - traefik.http.routers.reachyn-media.middlewares=reachyn-media-ip
+      - traefik.http.middlewares.reachyn-media-ip.ipallowlist.sourcerange=164.85.60.251/32
+
+  # ffmpeg-service: micro HTTP (montagem/ingest/thumbnail/persist). Containerizado a partir
+  # de /vps_nexus/ffmpeg-service (host systemd → stack). Engine alcança por NOME de serviço.
+  ffmpeg-service:
+    build: ./media/ffmpeg-service
+    restart: unless-stopped
+    environment:
+      S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://scality-s3:8000}   # upload interno (Scality)
+      S3_KEY: ${S3_KEY:?defina (S3 access key, = red…)}
+      S3_SECRET: ${S3_SECRET:?defina (S3 secret)}
+      S3_BUCKET: ${MEDIA_S3_BUCKET:-public}
+      S3_PUBLIC_BASE: ${MEDIA_S3_PUBLIC_BASE:-https://s3.example.com}/public
+      SPEECH_API_KEY: ${SPEECH_API_KEY:-}
+      BGUTIL_POT_BASE_URL: http://bgutil-pot:4416                      # PO token YouTube (sidecar)
+      FFMPEG_SERVICE_TOKEN: ${FFMPEG_SERVICE_TOKEN:?defina FFMPEG_SERVICE_TOKEN}  # X-Service-Token (AUD-008)
+    depends_on: [bgutil-pot, scality]
+    networks: [reachyn-net]
+
+  # bgutil-pot: provedor de PO token p/ YouTube (yt-dlp anti-bot, SEM cookie).
+  bgutil-pot:
+    # AUD-028: tag de versão fixa (não usar a implícita :latest).
+    # TODO confirmar digest sha256 exata desta tag (docker buildx imagetools inspect / pin @sha256:…)
+    image: brainicism/bgutil-ytdlp-pot-provider:1.1.0
+    restart: unless-stopped
+    networks: [reachyn-net]
