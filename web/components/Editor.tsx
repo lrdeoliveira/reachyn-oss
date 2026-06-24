@@ -155,6 +155,20 @@ export function Editor() {
           </div>
         )}
 
+        {/* Aviso: redes adicionadas SEM texto não serão publicadas (o publish só vai pras
+            redes com texto). Evita o "só publicou no LinkedIn" sem o usuário perceber. */}
+        {(() => {
+          const semTexto = platforms.filter((p) => !(texts[p] && texts[p].trim()));
+          if (semTexto.length === 0) return null;
+          return (
+            <p className="txt" style={{ color: "#ff9b8a", fontSize: ".85rem", margin: 0 }}>
+              ⚠ Estas redes estão <strong>sem texto</strong> e não serão publicadas:{" "}
+              {semTexto.map((p) => NET[p]?.name ?? p).join(", ")}. Abra cada aba e use{" "}
+              <strong>“Gerar texto IA”</strong> (ou escreva) para incluí-las.
+            </p>
+          );
+        })()}
+
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button className="btn ok" style={{ flex: "none", padding: "10px 18px" }} onClick={() => go("/midia")}>Ir pra Mídia →</button>
           <button className="btn edit" style={{ flex: "none", padding: "10px 18px" }} onClick={() => go("/aprovar")}>👁 Revisar e aprovar →</button>

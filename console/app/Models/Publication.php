@@ -52,24 +52,43 @@ class Publication extends Model
         array $results,
     ): ?self {
         try {
-            $networks = [];
-            $okCount = 0;
-            foreach ($results as $res) {
-                $ok = (bool) ($res['ok'] ?? false);
-                if ($ok) {
-                    $okCount++;
+            // MERGE por plataforma com o snapshot já gravado: publicar/republicar um SUBCONJUNTO
+            // de redes (ex.: LinkedIn agora, Instagram depois) NÃO apaga as redes já publicadas.
+            // Bug anterior: o updateOrCreate substituía `networks` inteiro pelo results da última
+            // run, então só a última rede sobrevivia. Agora as redes do results atual sobrescrevem
+            // a própria entrada; as demais (publicadas antes) são preservadas.
+            $existing = static::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('source_type', $sourceType)
+                ->where('source_id', (string) $sourceId)
+                ->first();
+
+            $byPlatform = [];
+            if ($existing && is_array($existing->networks)) {
+                foreach ($existing->networks as $n) {
+                    $p = (string) ($n['platform'] ?? '');
+                    if ($p !== '') {
+                        $byPlatform[$p] = $n;
+                    }
                 }
-                $networks[] = [
-                    'platform' => (string) ($res['platform'] ?? ''),
+            }
+            foreach ($results as $res) {
+                $p = (string) ($res['platform'] ?? '');
+                $ok = (bool) ($res['ok'] ?? false);
+                $byPlatform[$p] = [
+                    'platform' => $p,
                     'ok' => $ok,
                     'post_id' => $res['id'] ?? null,
                     'url' => $res['url'] ?? null,         // permalink do post, se o Zernio devolver
-                    'published_at' => $ok ? now()->toIso8601String() : null,
+                    // preserva a data anterior se a re-publicação não trouxe sucesso novo
+                    'published_at' => $ok ? now()->toIso8601String() : ($byPlatform[$p]['published_at'] ?? null),
                     'detail' => $res['detail'] ?? null,  // motivo da falha, se houver
                 ];
             }
+            $networks = array_values($byPlatform);
 
-            $total = count($results);
+            $okCount = count(array_filter($networks, fn ($n) => ! empty($n['ok'])));
+            $total = count($networks);
             $status = $okCount === 0
                 ? 'falhou'
                 : ($okCount === $total ? 'publicado' : 'parcial');

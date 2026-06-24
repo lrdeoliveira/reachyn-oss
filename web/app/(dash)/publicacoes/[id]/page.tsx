@@ -47,6 +47,7 @@ export default function PublicacaoDetalhePage() {
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -56,6 +57,22 @@ export default function PublicacaoDetalhePage() {
       .catch(() => setErro(true))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Excluir SÓ do Reachyn: remove o registro do arquivo; os posts continuam no ar nas redes.
+  async function excluir() {
+    if (!id || deleting) return;
+    if (!confirm("Remover esta publicação só do Reachyn?\n\nOs posts já publicados continuam no ar nas redes sociais — isso apaga apenas o registro aqui no painel.")) return;
+    setDeleting(true);
+    try {
+      const r = await sfetch(`/api/publications/${id}`, { method: "DELETE" });
+      if (r.ok) { window.location.href = "/publicacoes"; return; }
+      setDeleting(false);
+      alert("Não consegui remover agora. Tente de novo.");
+    } catch {
+      setDeleting(false);
+      alert("Não consegui remover agora. Tente de novo.");
+    }
+  }
 
   if (loading) return <div className="empty">Carregando…</div>;
   if (erro || !item) return <div className="empty">Publicação não encontrada.</div>;
@@ -67,7 +84,13 @@ export default function PublicacaoDetalhePage() {
       <a href="/publicacoes" className="sub" style={{ textDecoration: "none" }}>← Publicações</a>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 4 }}>
         <h1 className="h1" style={{ margin: 0 }}>{item.keyword || "(sem tema)"}</h1>
-        <span style={{ color: st.color, fontSize: ".9rem", fontWeight: 700 }}>{st.label}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ color: st.color, fontSize: ".9rem", fontWeight: 700 }}>{st.label}</span>
+          <button className="btn no" style={{ flex: "none", padding: "6px 12px", fontSize: ".82rem" }} disabled={deleting} onClick={excluir}
+            title="Remove só o registro no Reachyn; os posts continuam no ar nas redes">
+            {deleting ? "Removendo…" : "🗑 Excluir"}
+          </button>
+        </div>
       </div>
       <p className="sub">Publicada em {fmtDate(item.published_at) || "—"}</p>
 

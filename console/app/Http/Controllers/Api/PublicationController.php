@@ -58,4 +58,18 @@ class PublicationController extends Controller
             'published_at' => optional($publication->published_at)->toIso8601String(),
         ]]);
     }
+
+    /**
+     * DELETE /api/publications/{publication} → remove SÓ o registro local no Reachyn.
+     * NÃO despublica das redes sociais: os posts continuam no ar (o snapshot some daqui).
+     * Tenant-scoped (403 se for de outro tenant, além do global scope BelongsToTenant).
+     */
+    public function destroy(Request $request, Publication $publication): JsonResponse
+    {
+        abort_unless($publication->tenant_id === $request->user()->tenant_id, 403, 'Publicação de outro tenant.');
+
+        $publication->delete();
+
+        return response()->json(['ok' => true]);
+    }
 }

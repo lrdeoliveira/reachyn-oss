@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Arquivo de publicações (snapshot permanente do que foi ao ar) — escopado por tenant.
     Route::get('/publications', [PublicationController::class, 'index']);
     Route::get('/publications/{publication}', [PublicationController::class, 'show']);
+    Route::delete('/publications/{publication}', [PublicationController::class, 'destroy']); // remove só o registro local (não despublica das redes)
     // Galeria de mídia do tenant logado (escopada por tenant_id no banco).
     Route::get('/media/list', [StudioController::class, 'mediaList']);
     // Exclui um item da galeria por draft_id + id (item de qualquer rascunho do tenant).
