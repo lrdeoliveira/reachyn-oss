@@ -7,7 +7,8 @@ import { sfetch } from "@/lib/api";
 
 const CONSOLE = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "";
 
-const FLOW = [
+type NavItem = { href: string; label: string; icon: typeof Search; badge?: string };
+const FLOW: NavItem[] = [
   { href: "/", label: "Pesquisar", icon: Search },
   { href: "/editar", label: "Conteúdo", icon: FileText },
   { href: "/midia", label: "Mídia", icon: ImageIcon },
@@ -16,7 +17,7 @@ const FLOW = [
   { href: "/publicacoes", label: "Publicações", icon: Newspaper },
   { href: "/galeria", label: "Galeria", icon: GalleryHorizontalEnd },
 ];
-const ACCOUNT = [
+const ACCOUNT: NavItem[] = [
   { href: "/conexoes", label: "Conexões", icon: Plug },
   { href: "/plano", label: "Plano & Uso", icon: CreditCard },
 ];
@@ -31,8 +32,13 @@ export function SideNav() {
     }).catch(() => {});
   }, []);
 
-  const render = (items: typeof FLOW) => items.map(({ href, label, icon: Icon }) => (
-    <a key={href} href={href} className={path === href ? "active" : ""}><Icon size={17} /> {label}</a>
+  const render = (items: NavItem[]) => items.map(({ href, label, icon: Icon, badge }) => (
+    <a key={href} href={href} className={path === href ? "active" : ""}>
+      <Icon size={17} /> {label}
+      {badge && (
+        <span style={{ marginLeft: "auto", fontSize: ".58rem", fontWeight: 700, letterSpacing: ".03em", textTransform: "uppercase", color: "#e8a48f", background: "rgba(226,74,49,.16)", border: "1px solid rgba(226,74,49,.32)", padding: "1px 6px", borderRadius: 999 }}>{badge}</span>
+      )}
+    </a>
   ));
   return (
     <>

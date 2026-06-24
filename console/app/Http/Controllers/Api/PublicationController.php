@@ -39,7 +39,9 @@ class PublicationController extends Controller
                 ];
             });
 
-        return response()->json(['ok' => true, 'items' => $items]);
+        // no-store: snapshot dinâmico do tenant — o browser NUNCA deve servir versão cacheada
+        // (evita mostrar redes/itens desatualizados após republicar).
+        return response()->json(['ok' => true, 'items' => $items])->header('Cache-Control', 'no-store');
     }
 
     /** GET /api/publications/{publication} → detalhe completo. */
@@ -56,7 +58,7 @@ class PublicationController extends Controller
             'media' => $publication->media ?? [],
             'networks' => $publication->networks ?? [],
             'published_at' => optional($publication->published_at)->toIso8601String(),
-        ]]);
+        ]])->header('Cache-Control', 'no-store'); // dado dinâmico: sem cache no browser
     }
 
     /**

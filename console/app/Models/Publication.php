@@ -83,6 +83,9 @@ class Publication extends Model
                     // preserva a data anterior se a re-publicação não trouxe sucesso novo
                     'published_at' => $ok ? now()->toIso8601String() : ($byPlatform[$p]['published_at'] ?? null),
                     'detail' => $res['detail'] ?? null,  // motivo da falha, se houver
+                    // conteúdo publicado NESTA rede (texto + mídia) — o detalhe mostra por rede.
+                    'text' => $res['text'] ?? ($byPlatform[$p]['text'] ?? null),
+                    'media' => $res['media'] ?? ($byPlatform[$p]['media'] ?? null),
                 ];
             }
             $networks = array_values($byPlatform);

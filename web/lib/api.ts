@@ -96,6 +96,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${CONSOLE}/api${path}`, {
     ...init,
     credentials: "include",
+    cache: "no-store", // dados dinâmicos: nunca do cache do browser
     headers,
   });
   const data = await r.json().catch(() => ({}));
@@ -119,7 +120,9 @@ export async function sfetch(path: string, init?: RequestInit): Promise<Response
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
   else if (method !== "GET" && method !== "HEAD") headers["X-XSRF-TOKEN"] = await ensureCsrf();
 
-  return fetch(`${CONSOLE}${path}`, { ...init, credentials: "include", headers });
+  // cache: "no-store" — dados do dashboard são dinâmicos; nunca servir do cache do browser
+  // (senão uma resposta antiga, ex. publicação com menos redes, "gruda" após republicar).
+  return fetch(`${CONSOLE}${path}`, { ...init, credentials: "include", cache: "no-store", headers });
 }
 
 export type Source = { title: string; url: string; content: string; source: string };

@@ -68,26 +68,30 @@ class PublishService
         } else {
             $media = array_map(fn ($m) => ['type' => 'image', 'url' => $m['url']], array_slice($images, -4));
         }
+        // Snapshot da mídia publicada, normalizada {kind,url} — o detalhe mostra o conteúdo por rede.
+        $netMedia = array_map(fn ($m) => ['kind' => $m['type'] ?? 'image', 'url' => $m['url']], $media);
 
         $results = [];
         foreach (($d->texts ?? []) as $platform => $content) {
             if (trim((string) $content) === '') {
                 continue;
             }
+            // Conteúdo publicado NESTA rede (texto + mídia) — guardado no arquivo p/ exibir por rede.
+            $snap = ['text' => (string) $content, 'media' => $netMedia];
             if ($platform === 'blog') {
-                $results[] = ['platform' => 'blog', 'ok' => false, 'detail' => 'WordPress não conectado'];
+                $results[] = array_merge(['platform' => 'blog', 'ok' => false, 'detail' => 'WordPress não conectado'], $snap);
 
                 continue;
             }
             $accountId = $accMap[$platform] ?? null;
             if (! $accountId) {
-                $results[] = ['platform' => $platform, 'ok' => false, 'detail' => 'conta não conectada'];
+                $results[] = array_merge(['platform' => $platform, 'ok' => false, 'detail' => 'conta não conectada'], $snap);
 
                 continue;
             }
             $title = $platform === 'youtube' ? mb_substr($d->keyword ?: 'Vídeo', 0, 95) : null;
             $res = $this->zernio->createPost($platform, $accountId, (string) $content, $title, $media);
-            $results[] = array_merge(['platform' => $platform], $res);
+            $results[] = array_merge(['platform' => $platform], $res, $snap);
         }
 
         return $results;

@@ -1,12 +1,14 @@
 "use client";
 
 import { sfetch } from "@/lib/api";
+import { NetworkPreviewTabs } from "@/components/NetworkPreview";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 // Detalhe de uma publicação (snapshot permanente). Multi-tenant: o backend valida que
 // a publicação pertence ao tenant logado (403 caso contrário) — o cliente nunca abre a de outro.
-type Network = { platform: string; ok: boolean; post_id: string | null; url: string | null; published_at: string | null; detail?: string | null };
+// `text`/`media` por rede = o que foi publicado NAQUELA rede (o detalhe alterna por aba).
+type Network = { platform: string; ok: boolean; post_id: string | null; url: string | null; published_at: string | null; detail?: string | null; text?: string | null; media?: Media[] | null };
 type Media = { kind: string; url: string };
 type Item = {
   id: number;
@@ -48,6 +50,7 @@ export default function PublicacaoDetalhePage() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [active, setActive] = useState(""); // rede ativa nas abas de conteúdo
 
   useEffect(() => {
     if (!id) return;
@@ -95,34 +98,52 @@ export default function PublicacaoDetalhePage() {
       <p className="sub">Publicada em {fmtDate(item.published_at) || "—"}</p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Mídia que foi ao ar */}
-        {item.media.length > 0 && (
-          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
-            {item.media.map((m, i) => (
-              <div key={i} style={{ aspectRatio: "1 / 1", background: "var(--bg2)", borderRadius: 10, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {m.kind === "image" ? (
-                  <img src={m.url} loading="lazy" alt={item.keyword} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : isVideo(m.kind) ? (
-                  <video src={m.url} controls preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <span style={{ color: "var(--muted)", fontSize: ".8rem" }}>sem preview</span>
-                )}
+        {/* Conteúdo publicado POR REDE — abas pra alternar e ver o texto+mídia de cada rede.
+            Fallback (publicações antigas, sem conteúdo por rede): mídia geral + texto único. */}
+        {(() => {
+          const platforms = item.networks.map((n) => n.platform).filter(Boolean);
+          const hasPerNetwork = item.networks.some((n) => (n.text && n.text.trim()) || (n.media && n.media.length));
+          if (hasPerNetwork && platforms.length > 0) {
+            const cur = platforms.includes(active) ? active : platforms[0];
+            const texts = Object.fromEntries(item.networks.map((n) => [n.platform, n.text || ""]));
+            const medias = item.networks.find((n) => n.platform === cur)?.media || [];
+            return (
+              <div>
+                <div className="navgroup">Conteúdo publicado</div>
+                <NetworkPreviewTabs platforms={platforms} active={cur} onActive={setActive} texts={texts} medias={medias} />
               </div>
-            ))}
-          </div>
-        )}
+            );
+          }
+          return (
+            <>
+              {item.media.length > 0 && (
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
+                  {item.media.map((m, i) => (
+                    <div key={i} style={{ aspectRatio: "1 / 1", background: "var(--bg2)", borderRadius: 10, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {m.kind === "image" ? (
+                        <img src={m.url} loading="lazy" alt={item.keyword} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : isVideo(m.kind) ? (
+                        <video src={m.url} controls preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <span style={{ color: "var(--muted)", fontSize: ".8rem" }}>sem preview</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {item.content_text && (
+                <div>
+                  <div className="navgroup">Texto publicado</div>
+                  <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 16px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                    {item.content_text}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
-        {/* Texto final publicado */}
-        {item.content_text && (
-          <div>
-            <div className="navgroup">Texto publicado</div>
-            <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 16px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-              {item.content_text}
-            </div>
-          </div>
-        )}
-
-        {/* Redes onde foi publicado (com link pro post, se houver) */}
+        {/* Redes onde foi publicado (status + link pro post, se houver) */}
         <div>
           <div className="navgroup">Redes</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
