@@ -3,33 +3,35 @@
 import { sfetch } from "@/lib/api";
 import { useEffect, useState } from "react";
 
-type Field = { name: string; label: string; type: string };
-type Platform = { key: string; label: string; auth: "key" | "oauth"; fields: Field[]; note?: string };
+// A seção "Blog & outros" (conexão por chave — só WordPress) saiu em 2026-07-29: o produto não
+// publica mais em blog, não havia nenhuma conexão salva, e o formulário guardava credencial sem
+// validar nada. Sobrou o que se usa: perfis + redes sociais por OAuth.
 type Conn = { id: string; platform: string; label: string; status: string; detail: string };
 type Network = { key: string; label: string; icon: string };
 type Account = { id: string; platform: string; name: string };
+type Profile = { id: string; name: string; is_default: boolean; zernio_profile_id: string | null; accounts: Account[] };
 
 const CONSOLE = process.env.NEXT_PUBLIC_CONSOLE_URL ?? "";
 
 export default function ConexoesPage() {
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [conns, setConns] = useState<Conn[]>([]);
   const [networks, setNetworks] = useState<Network[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [open, setOpen] = useState<string | null>(null);
-  const [form, setForm] = useState<Record<string, string>>({});
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [netLimit, setNetLimit] = useState<number | null>(null);
   const [limitWarn, setLimitWarn] = useState<string | null>(null);
+  // Adicionar perfil (novo ou registrar um já existente no conector social pelo id)
+  const [addOpen, setAddOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addExisting, setAddExisting] = useState("");
 
   async function load() {
     const r = await sfetch("/api/connections");
     const d = await r.json();
-    setPlatforms(d.platforms ?? []);
     setConns(d.connections ?? []);
     setNetworks(d.networks ?? []);
-    setAccounts(d.accounts ?? []);
+    setProfiles(d.profiles ?? []);
     try {
       const u = await (await sfetch("/api/usage")).json();
       setNetLimit(typeof u?.limits?.networks === "number" ? u.limits.networks : null);
@@ -44,28 +46,26 @@ export default function ConexoesPage() {
       const lim = p.get("limite");
       setLimitWarn(
         lim
-          ? `Você atingiu o limite de ${lim} rede(s) do seu plano. Remova uma rede para conectar outra.`
+          ? `Você atingiu o limite de ${lim} rede(s) por perfil do seu plano. Remova uma rede ou aumente o limite.`
           : "Você atingiu o limite de redes do seu plano."
       );
       window.history.replaceState({}, "", window.location.pathname); // não reaparece no refresh
     }
   }, []);
 
-  const statusOf = (key: string) => conns.find((c) => c.platform === key);
-  const connected = (netKey: string) => accounts.filter((a) => a.platform === netKey);
 
-  async function connectKey(p: Platform) {
+  async function addProfile() {
+    if (!addName.trim()) { setMsg("❌ Dê um nome ao perfil."); return; }
     setBusy(true); setMsg(null);
-    const r = await sfetch("/api/connections", {
+    const r = await sfetch("/api/connections/profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ platform: p.key, credentials: form }),
+      body: JSON.stringify({ name: addName.trim(), zernio_profile_id: addExisting.trim() || undefined }),
     });
     const d = await r.json();
-    setMsg(d.ok ? `✅ ${d.detail}` : `❌ ${d.detail || d.error}`);
     setBusy(false);
-    await load();
-    if (d.ok) { setOpen(null); setForm({}); }
+    if (d.ok) { setMsg(`✅ Perfil "${addName.trim()}" criado.`); setAddOpen(false); setAddName(""); setAddExisting(""); await load(); }
+    else setMsg(`❌ ${d.error || "não foi possível criar o perfil"}`);
   }
 
   async function disconnect(accountId: string) {
@@ -74,14 +74,18 @@ export default function ConexoesPage() {
     await load();
   }
 
+  const totalAccounts = profiles.reduce((n, p) => n + p.accounts.length, 0);
+
   return (
     <>
       <h1 className="h1">Conexões</h1>
+      <div style={{ border: "1px solid rgba(245,158,11,.4)", background: "rgba(245,158,11,.08)", borderRadius: 10, padding: "10px 14px", margin: "8px 0 14px", fontSize: ".9rem", lineHeight: 1.5 }}>
+        ⚠️ <strong>Antes de conectar:</strong> esteja com a conta da rede social <strong>logada neste navegador</strong>. A conexão abre o login da própria plataforma — se você não estiver logado (ou estiver na conta errada), ela conecta a conta errada ou falha.
+      </div>
       <p className="sub">
-        Conecte suas redes sociais e seu blog.
-        {netLimit != null
-          ? ` Seu plano inclui ${netLimit} rede(s) — ${accounts.length} conectada(s).`
-          : ""}
+        Cada <strong>perfil</strong> é um conjunto de contas (ex.: Marca, Pessoal, Cliente X). Crie quantos precisar —
+        ao publicar, você escolhe em quais perfis postar.
+        {` ${totalAccounts} rede(s) conectada(s).`}
       </p>
 
       {limitWarn && (
@@ -90,84 +94,72 @@ export default function ConexoesPage() {
         </div>
       )}
 
-      {/* ───── Redes sociais (OAuth white-label, 1 clique) ───── */}
-      <h2 className="h2" style={{ marginTop: 8 }}>Redes sociais</h2>
-      <div className="grid">
-        {networks.map((n) => {
-          const accs = connected(n.key);
-          return (
-            <article key={n.key} className="card">
-              <div className="body">
-                <span className="title">{n.icon} {n.label}</span>
-                {accs.length ? (
-                  <span className="badge" style={{ background: "rgba(63,185,80,.15)", color: "var(--green)" }}>✅ {accs.length} conta(s)</span>
-                ) : (
-                  <span className="badge" style={{ background: "var(--bg2)", color: "var(--muted)" }}>— não conectada</span>
-                )}
-                {accs.map((a) => (
-                  <p key={a.id} className="txt" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                    <span>{a.name}</span>
-                    <button className="btn edit" style={{ padding: "2px 8px", fontSize: ".75rem" }} onClick={() => disconnect(a.id)}>remover</button>
-                  </p>
-                ))}
-              </div>
-              <div className="acts">
-                {/* Navegação completa → 302 pro OAuth da rede → volta pro Reachyn.
-                    Rede nova bloqueada ao atingir o teto do plano; reconexão (já tem conta) sempre liberada. */}
-                {!accs.length && netLimit != null && accounts.length >= netLimit ? (
-                  <span className="btn" style={{ opacity: 0.5, cursor: "not-allowed" }} title={`Limite de ${netLimit} redes do plano atingido`}>Limite atingido</span>
-                ) : (
-                  <a className="btn ok" href={`${CONSOLE}/connect/${n.key}`}>{accs.length ? "Conectar outra" : "Conectar"}</a>
-                )}
-              </div>
-            </article>
-          );
-        })}
+      {/* ───── Adicionar perfil ───── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "8px 0", gap: 8, flexWrap: "wrap" }}>
+        <h2 className="h2" style={{ margin: 0 }}>Perfis de redes</h2>
+        <button className="btn ok" style={{ flex: "none", padding: "8px 14px" }} onClick={() => { setAddOpen((o) => !o); setMsg(null); }}>+ Adicionar perfil</button>
       </div>
+      {addOpen && (
+        <div className="card" style={{ padding: 16, marginBottom: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label className="txt" style={{ color: "var(--muted)", fontSize: ".82rem" }}>Nome do perfil</label>
+            <input value={addName} placeholder="ex: Pessoal, Marca BR, Cliente X" onChange={(e) => setAddName(e.target.value)} style={{ background: "var(--bg2)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", fontSize: ".9rem" }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label className="txt" style={{ color: "var(--muted)", fontSize: ".82rem" }}>ID de profile existente <span style={{ fontWeight: 400 }}>(opcional — em branco cria um novo)</span></label>
+            <input value={addExisting} placeholder="deixe vazio para criar um perfil novo" onChange={(e) => setAddExisting(e.target.value)} style={{ background: "var(--bg2)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", fontSize: ".9rem", fontFamily: "ui-monospace, monospace" }} />
+          </div>
+          <div>
+            <button className="btn ok" disabled={busy} onClick={addProfile}>{busy ? "Criando..." : "Criar perfil"}</button>
+          </div>
+        </div>
+      )}
 
-      {/* ───── Blog / outras (chave manual) ───── */}
-      <h2 className="h2" style={{ marginTop: 24 }}>Blog & outros</h2>
-      <div className="grid">
-        {platforms.map((p) => {
-          const st = statusOf(p.key);
-          const badge =
-            st?.status === "connected" ? <span className="badge" style={{ background: "rgba(63,185,80,.15)", color: "var(--green)" }}>✅ conectado</span>
-            : st?.status === "error" ? <span className="badge" style={{ background: "rgba(217,61,38,.15)", color: "#ff9b8a" }}>❌ erro</span>
-            : <span className="badge" style={{ background: "var(--bg2)", color: "var(--muted)" }}>— não conectado</span>;
-          return (
-            <article key={p.key} className="card">
-              <div className="body">
-                <span className="title">{p.label}</span>
-                {badge}
-                {st?.detail && <p className="txt">{st.detail}</p>}
-              </div>
-              <div className="acts">
-                <button className="btn ok" onClick={() => { setOpen(open === p.key ? null : p.key); setForm({}); setMsg(null); }}>
-                  {st ? "Reconectar" : "Conectar"}
-                </button>
-              </div>
-              {open === p.key && (
-                <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                  {p.fields.map((f) => (
-                    <input
-                      key={f.name}
-                      type={f.type === "password" ? "password" : "text"}
-                      placeholder={f.label}
-                      value={form[f.name] ?? ""}
-                      onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-                      style={{ background: "var(--bg2)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", fontSize: ".9rem" }}
-                    />
-                  ))}
-                  <button className="btn ok" disabled={busy} onClick={() => connectKey(p)}>
-                    {busy ? "Validando..." : "Validar e salvar"}
-                  </button>
-                  {msg && <p className="txt">{msg}</p>}
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
+      {/* ───── Perfis: cada um com sua grade de redes (OAuth white-label, 1 clique) ───── */}
+      {profiles.length === 0 && <p className="txt" style={{ color: "var(--muted)" }}>Nenhum perfil ainda. Crie o primeiro acima.</p>}
+      {profiles.map((prof) => (
+        <section key={prof.id} className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+            <strong style={{ fontSize: "1.02rem" }}>{prof.name}</strong>
+            {prof.is_default && <span className="badge" style={{ background: "rgba(96,165,250,.15)", color: "#60a5fa" }}>padrão</span>}
+            <span className="txt" style={{ color: "var(--muted)", fontSize: ".8rem" }}>· {prof.accounts.length} conta(s)</span>
+          </div>
+          <div className="grid">
+            {networks.map((n) => {
+              const accs = prof.accounts.filter((a) => a.platform === n.key);
+              const atLimit = false; // F-pub: sem teto de redes — cada conta conectada custa $8/mês (sem limite)
+              return (
+                <article key={n.key} className="card">
+                  <div className="body">
+                    <span className="title">{n.icon} {n.label}</span>
+                    {accs.length ? (
+                      <span className="badge" style={{ background: "rgba(63,185,80,.15)", color: "var(--green)" }}>✅ {accs.length} conta(s)</span>
+                    ) : (
+                      <span className="badge" style={{ background: "var(--bg2)", color: "var(--muted)" }}>— não conectada</span>
+                    )}
+                    {accs.map((a) => (
+                      <p key={a.id} className="txt" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <span>{a.name}</span>
+                        <button className="btn edit" style={{ padding: "2px 8px", fontSize: ".75rem" }} onClick={() => disconnect(a.id)}>remover</button>
+                      </p>
+                    ))}
+                  </div>
+                  <div className="acts">
+                    {/* Navegação completa → 302 pro OAuth da rede (no PERFIL escolhido) → volta pro Reachyn. */}
+                    {atLimit ? (
+                      <span className="btn" style={{ opacity: 0.5, cursor: "not-allowed" }} title={`Limite de ${netLimit} redes por perfil atingido`}>Limite atingido</span>
+                    ) : (
+                      <a className="btn ok" href={`${CONSOLE}/connect/${n.key}?profile=${prof.id}`}>{accs.length ? "Conectar outra" : "Conectar"}</a>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
+      {msg && <p className="txt" style={{ marginTop: 14 }}>{msg}</p>}
     </>
   );
 }

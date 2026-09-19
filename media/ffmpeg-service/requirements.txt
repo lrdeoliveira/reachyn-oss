@@ -1,3 +1,5 @@
 boto3
-yt-dlp==2025.05.22  # pin AUD-015 (versão fixa; atualizar conscientemente)
+Pillow>=11.0.0  # composição do model sheet (grid determinístico + rótulos + swatches)
+yt-dlp==2026.8.19  # pin AUD-015 (versão fixa; atualizar conscientemente — bump 2026-08-28, pareado com bgutil-pot-provider 1.3.2 no compose)
 bgutil-ytdlp-pot-provider
+urllib3>=2.7.0  # piso de segurança (CVE-2025-66418/66471, CVE-2026-21441/44431 nas <2.7)

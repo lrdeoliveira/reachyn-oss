@@ -1,65 +1,25 @@
 // Package genkeys — overrides em runtime das chaves dos provedores de GERAÇÃO.
 // As chaves vivem no console (Postgres cifrado); o engine recebe via PUT /v1/admin/gen-keys
 // e busca no boot (SyncFromConsole). Campo vazio = mantém o default do .env.
-// Provedores de PESQUISA NÃO entram aqui — são BYOK por tenant.
-//
-// White-label: os nomes Go e as tags JSON são genéricos/opacos — nenhum nome de provedor
-// no código nem no contrato de fio. O console envia exclusivamente as tags opacas.
+// Provedores de PESQUISA (tavily/brave/jina/scrapecreators) NÃO entram aqui — são BYOK por tenant.
 package genkeys
-
-import "encoding/json"
 
 // Set — chaves dos provedores de geração geridas pelo operador (admin).
 type Set struct {
-	Text         string // LLM (texto) + imagem (provedor primário)
-	TextAlt      string // LLM fallback (texto alternativo)
-	Media        string // mídia: vídeo (fila) + edição de imagem (i2i)
-	PremiumVideo string // vídeo premium
-	Speech       string // voz: transcrição, dublagem, narração
+	Minimax    string `json:"minimax"`    // LLM (texto) + imagem (image-01)
+	Ollama     string `json:"ollama"`     // LLM fallback
+	Google     string `json:"google"`     // vídeo premium (Veo)
+	Elevenlabs string `json:"elevenlabs"` // voz: transcrição, dublagem, narração
+	Magnific   string `json:"magnific"`   // Magnific (API HTTP): imagem, upscale/edição, clipe e fala sincronizada
 
-	// Overrides de base_url + model do LLM de TEXTO. Vazio = default do env/llm.
-	TextBaseURL    string // base do provedor de texto primário (o llm concatena o path)
-	TextModel      string // modelo do provedor de texto primário
-	TextAltBaseURL string // base do provedor de texto alternativo
-	TextAltModel   string // modelo do provedor de texto alternativo
-}
+	// Overrides de base_url + model do LLM de TEXTO (estilo Nexusyn). Vazio = default do llm.
+	// Retrocompat: Set antigo (sem estes campos) decodifica como "" → comportamento idêntico.
+	MinimaxBaseURL string `json:"minimax_base_url"` // base do MiniMax, ex.: https://api.minimax.io (o llm concatena /v1/text/chatcompletion_v2)
+	MinimaxModel   string `json:"minimax_model"`    // model do MiniMax, ex.: MiniMax-M2.7
+	OllamaBaseURL  string `json:"ollama_base_url"`  // base do Ollama, ex.: https://ollama.com (o llm concatena /api/chat)
+	OllamaModel    string `json:"ollama_model"`     // model do Ollama, ex.: gemini-3-flash-preview
 
-// wire — representação de fio (contrato com o console). Só tags opacas.
-type wire struct {
-	Text         *string `json:"text"`
-	TextAlt      *string `json:"text_alt"`
-	Media        *string `json:"media"`
-	PremiumVideo *string `json:"premium"`
-	Speech       *string `json:"voice"`
-
-	TextBaseURL    *string `json:"text_base_url"`
-	TextModel      *string `json:"text_model"`
-	TextAltBaseURL *string `json:"text_alt_base_url"`
-	TextAltModel   *string `json:"text_alt_model"`
-}
-
-// UnmarshalJSON — decodifica as tags opacas do contrato de fio com o console.
-func (s *Set) UnmarshalJSON(b []byte) error {
-	var w wire
-	if err := json.Unmarshal(b, &w); err != nil {
-		return err
-	}
-	pick := func(p *string) string {
-		if p != nil {
-			return *p
-		}
-		return ""
-	}
-	s.Text = pick(w.Text)
-	s.TextAlt = pick(w.TextAlt)
-	s.Media = pick(w.Media)
-	s.PremiumVideo = pick(w.PremiumVideo)
-	s.Speech = pick(w.Speech)
-	s.TextBaseURL = pick(w.TextBaseURL)
-	s.TextModel = pick(w.TextModel)
-	s.TextAltBaseURL = pick(w.TextAltBaseURL)
-	s.TextAltModel = pick(w.TextAltModel)
-	return nil
+	Spriterrific string `json:"spriterrific"` // sprites de jogo (aba Sprites): personagem → spritesheet
 }
 
 // Or devolve o override se não-vazio, senão o default (env).

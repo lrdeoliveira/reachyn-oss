@@ -2,19 +2,20 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\RetriesTransientEngineErrors;
 use App\Models\Draft;
 use App\Models\Tenant;
 use App\Services\UsageService;
+use App\Support\EngineClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Gera vídeo de forma ASSÍNCRONA (worker de fila). A geração leva minutos (vídeo/vídeo premium) e,
+ * Gera vídeo de forma ASSÍNCRONA (worker de fila). A geração leva minutos (Kling/Veo) e,
  * feita no request, estourava o timeout do proxy → o front recebia resposta cortada e
  * mostrava "undefined". Aqui o worker (timeout 1300s) chama o engine e anexa a mídia ao
  * rascunho; o Studio já faz polling da galeria até o vídeo aparecer. Cota: reservada no
@@ -22,19 +23,26 @@ use Illuminate\Support\Facades\Log;
  */
 class GenerateVideoJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, RetriesTransientEngineErrors, SerializesModels;
 
     public int $timeout = 1300;
-    public int $tries = 1;
+
+    // Retry idempotente: um blip/5xx transitório do provedor no meio de minutos de geração era
+    // descartado (tries=1). Agora retenta com backoff; erro permanente (4xx) desiste na hora.
+    public int $tries = 3;
 
     public function __construct(
         public int $draftId,
         public int $tenantId,
-        public string $endpoint,   // '/v1/video' ou '/v1/premium-video'
+        public string $endpoint,   // '/v1/video' ou '/v1/veo'
         public array $payload,
-        public string $usageKind,  // bucket de cota: 'video' ou 'premium-video'
+        public string $usageKind,  // bucket de cota: 'video' ou 'veo'
         public int $weight,
         public string $style,
+        public array $platforms = [],  // redes a que esta mídia se destina (vazio = todas)
+        public ?int $costCredits = null, // custo em créditos do modelo escolhido (null = custo fixo por tipo)
+        public string $mediaKind = 'video', // tipo do item na galeria: 'video' (default) | 'audio' (música)
+        public int $effectCount = 0,        // F1: transições/efeitos cobrados no controller (estornados aqui em falha)
     ) {}
 
     public function handle(UsageService $usage): void
@@ -42,23 +50,23 @@ class GenerateVideoJob implements ShouldQueue
         $d = Draft::find($this->draftId);
         if (! $d) {
             $this->refund($usage);
+
             return;
         }
 
-        $res = Http::baseUrl(rtrim((string) config('services.engine.url'), '/'))
-            ->withHeaders(['X-Admin-Token' => (string) config('services.engine.admin_token')])
-            ->acceptJson()->timeout(1200)
+        $res = EngineClient::make(1200)
             ->post($this->endpoint, $this->payload);
 
-        $url = $res->successful() ? (string) $res->json('url') : '';
+        $url = $this->engineUrlOrRetry($res, 'GenerateVideoJob', ['draft' => $this->draftId]);
         if ($url === '') {
-            Log::warning('GenerateVideoJob: geração sem URL', ['draft' => $this->draftId, 'status' => $res->status()]);
             $this->refund($usage);
+
             return;
         }
 
-        // Anexa o vídeo à galeria do rascunho (mesmo formato do attach síncrono).
-        $item = ['id' => (string) (int) (microtime(true) * 1000), 'kind' => 'video', 'url' => $url, 'style' => $this->style];
+        // Anexa a mídia à galeria do rascunho (mesmo formato do attach síncrono). mediaKind = 'video'
+        // por padrão; 'audio' para música (a galeria renderiza com <audio controls>).
+        $item = ['id' => Draft::mediaId(), 'kind' => $this->mediaKind, 'url' => $url, 'style' => $this->style, 'platforms' => array_values($this->platforms)];
         $d->update(['media' => array_merge($d->media ?? [], [$item])]);
     }
 
@@ -72,7 +80,10 @@ class GenerateVideoJob implements ShouldQueue
     {
         $t = Tenant::find($this->tenantId);
         if ($t) {
-            $usage->refund($t, $this->usageKind, $this->weight);
+            $usage->refund($t, $this->usageKind, $this->weight, $this->costCredits);
+            if ($this->effectCount > 0) {
+                $usage->refund($t, 'effect', $this->effectCount); // transições cobradas junto da montagem
+            }
         }
     }
 }

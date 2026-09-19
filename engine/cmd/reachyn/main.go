@@ -7,58 +7,65 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/api"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/config"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/content"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/genkeys"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/media"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/image"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/llm"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/rerank"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/scraper"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/search"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/speech"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/video"
+	"github.com/redfoxcode/reachyn/engine/internal/api"
+	"github.com/redfoxcode/reachyn/engine/internal/config"
+	"github.com/redfoxcode/reachyn/engine/internal/content"
+	"github.com/redfoxcode/reachyn/engine/internal/genkeys"
+	"github.com/redfoxcode/reachyn/engine/internal/media"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/image"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/llm"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/mesh"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/motion"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/music"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/rerank"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/scraper"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/search"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/speech"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/video"
 )
 
 func main() {
 	cfg := config.Load()
 
 	// build reconstrói o serviço com as chaves de geração geridas no console sobrepostas
-	// ao .env. As de pesquisa (busca/leitor/scraper) seguem do .env (BYOK por tenant
+	// ao .env. As de pesquisa (tavily/brave/jina/scrapecreators) seguem do .env (BYOK por tenant
 	// vai por request). Providers são clients HTTP baratos — reconstruir é instantâneo.
 	build := func(k genkeys.Set) *content.Service {
 		return content.New(
-			search.New(cfg.SearchPrimary, cfg.SearchAlt, cfg.Rerank),
-			scraper.New(cfg.Scraper, cfg.ScraperBase),
-			llm.New(genkeys.Or(k.TextAlt, cfg.TextAlt), genkeys.Or(k.Text, cfg.Text), llm.LLMConfig{
-				// base_url + model do LLM de texto vêm das chaves geridas no console; vazio → env (cfg).
-				TextBaseURL:    genkeys.Or(k.TextBaseURL, cfg.TextBaseURL),
-				TextModel:      genkeys.Or(k.TextModel, cfg.TextModel),
-				TextAltBaseURL: genkeys.Or(k.TextAltBaseURL, cfg.TextAltBaseURL),
-				TextAltModel:   genkeys.Or(k.TextAltModel, cfg.TextAltModel),
-			}),
-			rerank.New(cfg.Rerank, cfg.RerankBaseURL, cfg.RerankModel),
-			image.New(genkeys.Or(k.Media, cfg.Media), genkeys.Or(k.Text, cfg.Text), image.ImageConfig{
-				GenURL:       cfg.ImageGenURL,
-				EditURL:      cfg.ImageEditURL,
-				PrimaryBase:  cfg.ImageBaseURL,
-				PrimaryModel: cfg.ImageModel,
-			}),
-			video.New(genkeys.Or(k.Media, cfg.Media), genkeys.Or(k.PremiumVideo, cfg.PremiumVideo), video.VideoConfig{
-				AT2V: cfg.VideoAT2V, AI2V: cfg.VideoAI2V,
-				BT2V: cfg.VideoBT2V, BI2V: cfg.VideoBI2V,
-				CT2V: cfg.VideoCT2V, CI2V: cfg.VideoCI2V,
-				PremiumBaseURL:    cfg.PremiumVideoBaseURL,
-				PremiumModel:      cfg.PremiumVideoModel,
-				PremiumAuthHeader: cfg.PremiumVideoAuthHeader,
-			}),
-			speech.New(genkeys.Or(k.Speech, cfg.Speech), speech.Config{
-				BaseURL:      cfg.SpeechBaseURL,
-				Model:        cfg.SpeechModel,
-				APIKeyHeader: cfg.SpeechAPIKeyHeader,
-			}),
+			search.New(cfg.Tavily, cfg.Brave, cfg.Jina),
+			scraper.New(cfg.ScrapeCreators),
+			llm.New(genkeys.Or(k.Ollama, cfg.Ollama), genkeys.Or(k.Minimax, cfg.Minimax), llm.LLMConfig{
+				// base_url + model do LLM de texto vêm das chaves geridas no console (vazio → default no llm).
+				MinimaxBaseURL: k.MinimaxBaseURL,
+				MinimaxModel:   k.MinimaxModel,
+				OllamaBaseURL:  k.OllamaBaseURL,
+				OllamaModel:    k.OllamaModel,
+			}).
+				// Texto pela CLI do host (conta de ASSINATURA, sem crédito por chamada) — é a
+				// linha PRIMÁRIA desde 2026-08-03, à frente do agregador. Ordem efetiva:
+				// cli-bridge → MiniMax M2.7. Bridge desligado (URL vazia) = cai pro MiniMax.
+				WithCliBridge(cfg.CliBridgeURL, cfg.CliBridgeToken, cfg.CliTextCLI, cfg.CliTextFastCLI).
+				WithCliBridgeMac(cfg.CliBridgeMacURL, cfg.CliBridgeMacToken),
+			rerank.New(cfg.Jina),
+			image.New(genkeys.Or(k.Minimax, cfg.Minimax)).
+				WithMagnific(genkeys.Or(k.Magnific, cfg.Magnific)).           // Magnific (API HTTP): t2i/i2i + upscale/edição
+				WithCliBridge(cfg.CliBridgeURL, cfg.CliBridgeToken).          // CLIs no host da VPS — ver tools/cli-bridge
+				WithCliBridgeMac(cfg.CliBridgeMacURL, cfg.CliBridgeMacToken). // 2º sidecar no Mac (adapter "mac:")
+				WithComfy(cfg.ComfyURL),                                      // ComfyUI local (Mac do Luciano) — vazio na VPS = desligado, erro claro em runtime
+			video.New(genkeys.Or(k.Google, cfg.Google)).
+				WithMinimax(genkeys.Or(k.Minimax, cfg.Minimax), k.MinimaxBaseURL). // Hailuo direto (conta pré-paga) p/ GIF/vídeo
+				WithComfy(cfg.ComfyURL).                                           // prévia de movimento LOCAL (Wan 2.2) — mesmo servidor da imagem
+				WithMagnific(genkeys.Or(k.Magnific, cfg.Magnific)).                // Magnific: clipe + fala sincronizada (OmniHuman)
+				WithCliBridge(cfg.CliBridgeURL, cfg.CliBridgeToken).               // vídeo via CLI no host (mesmo sidecar da imagem)
+				WithCliBridgeMac(cfg.CliBridgeMacURL, cfg.CliBridgeMacToken),
+			speech.New(genkeys.Or(k.Elevenlabs, cfg.Elevenlabs)).
+				WithCliBridge(cfg.CliBridgeURL, cfg.CliBridgeToken). // narração via CLI no host (mesmo sidecar de imagem/vídeo)
+				WithCliBridgeMac(cfg.CliBridgeMacURL, cfg.CliBridgeMacToken).
+				WithMinimax(genkeys.Or(k.Minimax, cfg.Minimax), k.MinimaxBaseURL), // 🔁 reserva de voz do PREVIEW (ver SynthesizeSpeech)
+			music.New(genkeys.Or(k.Minimax, cfg.Minimax), k.MinimaxBaseURL),
 			media.New(cfg.FFmpegURL, cfg.FFmpegToken),
+			motion.New(cfg.RunningHub), // motion transfer via RunningHub (workflow curado; chave via env)
+			mesh.New(cfg.ComfyURL),     // 🧊 malha 3D (Hunyuan3D nativo) no MESMO ComfyUI — vazio na VPS = desligado
 		)
 	}
 	apiSrv := api.New(build, cfg.AdminToken)

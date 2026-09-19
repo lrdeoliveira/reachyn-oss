@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Log;
  *
  * Multi-tenant: trait BelongsToTenant (global scope por tenant_id + auto-fill).
  * Cada cliente só enxerga as próprias publicações.
+ *
+ * @property array<array-key,mixed>|null $media
+ * @property array<array-key,mixed>|null $networks
  */
 class Publication extends Model
 {
@@ -39,7 +42,7 @@ class Publication extends Model
      * exceção: o arquivo é secundário — a publicação NUNCA pode falhar por causa
      * dele (try/catch + log).
      *
-     * @param  array<int,array{kind?:string,url?:string}>  $media       mídia que foi publicada [{kind,url}]
+     * @param  array<int,array{kind?:string,url?:string}>  $media  mídia que foi publicada [{kind,url}]
      * @param  array<int,array{platform?:string,ok?:bool,id?:string,url?:string,detail?:string}>  $results  resultado por rede
      */
     public static function record(
@@ -86,6 +89,8 @@ class Publication extends Model
                     // conteúdo publicado NESTA rede (texto + mídia) — o detalhe mostra por rede.
                     'text' => $res['text'] ?? ($byPlatform[$p]['text'] ?? null),
                     'media' => $res['media'] ?? ($byPlatform[$p]['media'] ?? null),
+                    // comunidade do Reddit (subreddit), quando houver — preserva p/ repost/detalhe.
+                    'subreddit' => $res['subreddit'] ?? ($byPlatform[$p]['subreddit'] ?? null),
                 ];
             }
             $networks = array_values($byPlatform);

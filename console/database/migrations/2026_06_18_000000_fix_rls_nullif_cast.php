@@ -22,8 +22,8 @@ return new class extends Migration
             return;
         }
         $cond = "current_setting('app.current_tenant', true) IS NULL "
-              . "OR current_setting('app.current_tenant', true) = '' "
-              . "OR tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::bigint";
+              ."OR current_setting('app.current_tenant', true) = '' "
+              ."OR tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::bigint";
 
         foreach ($this->tables as $t) {
             DB::statement("DROP POLICY IF EXISTS tenant_isolation ON {$t}");

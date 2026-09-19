@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('billing_status')->default('none');
             $table->string('voice_id')->nullable();
             $table->timestamps();
+            // Colunas Stripe (stripe_id, pm_*, trial_ends_at) entram via Cashier customer_columns.
         });
     }
 

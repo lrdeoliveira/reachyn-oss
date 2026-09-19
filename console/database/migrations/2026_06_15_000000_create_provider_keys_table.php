@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-// Chaves dos provedores de GERAÇÃO (operador): texto, texto-alt, vídeo/imagem, voz.
+// Chaves dos provedores de GERAÇÃO (operador): minimax, ollama, kie, elevenlabs.
 // Globais (não por tenant), cifradas (cast encrypted no model). O engine as recebe via
 // PUT /v1/admin/gen-keys (push no save) + GET /internal/gen-keys (boot-fetch).
 return new class extends Migration
@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('provider_keys', function (Blueprint $table) {
             $table->id();
-            $table->string('provider')->unique(); // slug do provedor (contrato de fio com o engine)
+            $table->string('provider')->unique(); // minimax | ollama | kie | elevenlabs
             $table->text('api_key')->nullable();   // cifrada (encrypted cast)
             $table->timestamps();
         });

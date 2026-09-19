@@ -13,17 +13,23 @@ use Illuminate\Support\Facades\Http;
  */
 class GenerationKeys
 {
-    /**
-     * Provedores geridos, agrupados por função (white-label: SÓ rótulos genéricos na UI).
-     * O campo `key` é o CONTRATO DE FIO com o engine (tags JSON de genkeys.Set) — NÃO renomear
-     * sem alinhar o engine. Os `label`/`group`/`desc` são genéricos (sem nome de marca).
-     */
+    /** Provedores geridos, agrupados por função (white-label: nomes só no admin). */
     public const PROVIDERS = [
-        ['key' => 'text', 'label' => 'Texto/Imagem (primário)', 'group' => 'Texto & Imagem', 'desc' => 'LLM (texto dos posts, briefs, prompts) + imagem (primário).', 'testable' => true, 'configurable' => ['base_url', 'model']],
-        ['key' => 'text_alt', 'label' => 'Texto (alternativo)', 'group' => 'Texto & Imagem', 'desc' => 'LLM de fallback (texto).', 'testable' => true, 'configurable' => ['base_url', 'model']],
-        ['key' => 'media', 'label' => 'Vídeo/Imagem', 'group' => 'Vídeo & Imagem', 'desc' => 'Vídeo (fila) + imagem i2i + fallback de imagem.', 'testable' => true],
-        ['key' => 'premium', 'label' => 'Vídeo premium', 'group' => 'Vídeo & Imagem', 'desc' => 'Vídeo premium com áudio nativo.', 'testable' => true],
-        ['key' => 'voice', 'label' => 'Voz', 'group' => 'Voz', 'desc' => 'Narração (voz BR), transcrição, clonagem e dublagem.', 'testable' => true],
+        ['key' => 'minimax', 'label' => 'MiniMax', 'group' => 'Texto & Imagem', 'desc' => 'LLM (texto dos posts, briefs, prompts) + imagem (image-01, primário).', 'testable' => true, 'configurable' => ['base_url', 'model']],
+        ['key' => 'ollama', 'label' => 'Ollama', 'group' => 'Texto & Imagem', 'desc' => 'LLM de fallback (texto).', 'testable' => true, 'configurable' => ['base_url', 'model']],
+        ['key' => 'google', 'label' => 'Google (Veo)', 'group' => 'Vídeo', 'desc' => 'Vídeo premium com áudio nativo (Veo 3.1).', 'testable' => true],
+        ['key' => 'elevenlabs', 'label' => 'ElevenLabs', 'group' => 'Voz', 'desc' => 'Narração (voz BR), transcrição, clonagem e dublagem.', 'testable' => true],
+        // ⚠️ O slot do agregador (key 'kie') saiu em 2026-08-04. Ele continuava na tela de Chaves
+        // de geração quase um ano depois de o motor sair do ar (2026-08-03): pedia ao operador a
+        // chave de um provedor que nenhum caminho chama mais, e ainda estampava o nome dele na
+        // interface (guideline #6, white-label). Campo de chave para motor morto não é resíduo
+        // inofensivo — é um convite a cadastrar credencial viva num lugar que ninguém audita.
+        // 🐛 FALTAVA (2026-08-02): o engine já lia `genkeys.Set.Spriterrific` e, sem chave,
+        // respondia "Chave do motor de sprites não configurada — salve em Chaves de geração".
+        // Só que esta lista — que É a tela de Chaves de geração — não tinha o campo. A mensagem
+        // mandava o operador a um lugar que não existia, e a aba Sprites ficava morta sem
+        // qualquer caminho de conserto. O motor LOCAL de sprites não depende desta chave.
+        ['key' => 'spriterrific', 'label' => 'Spriterrific', 'group' => 'Sprites', 'desc' => 'Motor hospedado de sprites de jogo (aba Sprites): personagem → âncora direcional + spritesheets de walk/idle/attack. Créditos debitados no provedor. O motor LOCAL da mesma aba não usa esta chave.', 'testable' => true],
     ];
 
     /** Chave única de gen_lines em app_settings. */
@@ -32,24 +38,29 @@ class GenerationKeys
     /**
      * Provedores/modelos válidos por função de GERAÇÃO (allowlist de validação).
      * Diferente das chaves (PROVIDERS): aqui são as "opções" escolhíveis por função.
-     * Os valores são o CONTRATO DE FIO com o engine (gen_lines primary/fallback) — o engine
-     * casa por essas strings; NÃO renomear sem alinhar o engine.
      *
      * @var array<string,array<int,string>>
      */
     public const GEN_PROVIDERS = [
-        'text'  => ['text', 'text-alt'],
-        'image' => ['image', 'image-alt'],
-        'video' => ['video-a', 'video-b', 'video-c'],
-        'voice' => ['voice'],
+        'text' => ['minimax', 'ollama'],
+        'image' => ['minimax'],
+        // ⚠️ 2026-08-04: eram 'hailuo-fast', 'hailuo', 'seedance' e 'kling' — os quatro rodavam
+        // pelo agregador e saíram do ar com ele. A escolha de motor de vídeo mudou de lugar: hoje
+        // é POR MODELO no catálogo (gen_models → gen_lines montadas em GenPayload), não neste
+        // ajuste global. Sobra o Hailuo direto, que tem chave própria e o engine roteia
+        // ('minimax' em clipModelOrdered).
+        'video' => ['minimax'],
+        'voice' => ['elevenlabs'],
     ];
 
     /** Defaults recomendados de principal/fallback por função de GERAÇÃO. */
     public const GEN_LINES_DEFAULT = [
-        'text'  => ['primary' => 'text',    'fallback' => 'text-alt'],
-        'image' => ['primary' => 'image',   'fallback' => 'image-alt'],
-        'video' => ['primary' => 'video-a', 'fallback' => 'video-b'],
-        'voice' => ['primary' => 'voice',   'fallback' => ''],
+        'text' => ['primary' => 'minimax',  'fallback' => 'ollama'],
+        'image' => ['primary' => 'minimax',  'fallback' => ''],
+        // 'hailuo' + 'seedance' eram do agregador (ver GEN_PROVIDERS): recomendar um default que
+        // a própria allowlist recusa deixaria a tela salvando 422 no botão "usar recomendado".
+        'video' => ['primary' => 'minimax', 'fallback' => ''],
+        'voice' => ['primary' => 'elevenlabs', 'fallback' => ''],
     ];
 
     /**
@@ -150,7 +161,7 @@ class GenerationKeys
     /**
      * Payload no formato do engine (genkeys.Set): todas as chaves geridas (vazio = manter .env).
      * Providers de TEXTO configuráveis também mandam <provider>_base_url e <provider>_model
-     * (snake_case) quando setados, no formato esperado pelas tags JSON do engine (genkeys.Set).
+     * (snake_case) quando setados. Ex.: minimax_base_url, minimax_model, ollama_base_url, ollama_model.
      * Inclui também gen_lines (principal/fallback por função de geração) — objeto, mesmo shape
      * que genLines(): { "text":{"primary","fallback"}, "image":{...}, "video":{...}, "voice":{...} }.
      */

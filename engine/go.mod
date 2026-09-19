@@ -1,3 +1,3 @@
-module github.com/lrdeoliveira/reachyn-oss/engine
+module github.com/redfoxcode/reachyn/engine
 
-go 1.26.3
+go 1.27.0

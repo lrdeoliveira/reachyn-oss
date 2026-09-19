@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('period');                      // YYYY-MM
-            $table->string('kind');                        // image | video | premium-video
+            $table->string('kind');                        // image | video | veo
             $table->unsignedInteger('count')->default(0);
             $table->unique(['tenant_id', 'period', 'kind']);
         });

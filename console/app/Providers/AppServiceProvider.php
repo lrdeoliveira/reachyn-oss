@@ -2,11 +2,15 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\SetCurrentTenant;
+use App\Http\Responses\LoginResponse;
 use App\Support\Audit;
+use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
         // Pós-login do painel cliente → Studio (/pesquisar), não o painel Filament /app.
         $this->app->bind(
             \Filament\Auth\Http\Responses\Contracts\LoginResponse::class,
-            \App\Http\Responses\LoginResponse::class,
+            LoginResponse::class,
         );
     }
 
@@ -35,14 +39,14 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        // RLS (defense-in-depth): o middleware SetCurrentTenant roda ANTES do auth, então o
-        // valor real do tenant só é conhecido aqui — quando o guard resolve o usuário. Re-sincroniza
-        // app.current_tenant com o tenant do usuário autenticado para a política RLS filtrar de fato.
-        Event::listen(\Illuminate\Auth\Events\Authenticated::class, function (): void {
-            \App\Http\Middleware\SetCurrentTenant::sync();
+        // Reply-To global: envio é noreply@redfoxcode.com.br (transacional), mas
+        // respostas dos usuários caem na caixa monitorada contato@redfoxcode.com.br.
+        Mail::alwaysReplyTo('contato@redfoxcode.com.br', 'RedFoxCode');
+
+        Event::listen(Authenticated::class, function (): void {
+            SetCurrentTenant::sync();
         });
 
-        // AUD-005: auditoria de autenticação (login ok / falha / lockout do throttle).
         Event::listen(Login::class, function (Login $e): void {
             Audit::log('auth.login.success', ['guard' => $e->guard, 'auth_user_id' => $e->user?->getAuthIdentifier()]);
         });
@@ -54,4 +58,5 @@ class AppServiceProvider extends ServiceProvider
             Audit::log('auth.login.lockout', ['ip' => $e->request->ip(), 'email' => $e->request->input('email')]);
         });
     }
+
 }

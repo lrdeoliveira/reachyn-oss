@@ -3,8 +3,8 @@ import boto3
 from botocore.client import Config
 from flask import Flask, render_template_string, redirect, request
 
-ENDPOINT = os.environ.get("S3_ENDPOINT", "")
-PUBLIC_BASE = os.environ.get("PUBLIC_BASE", "")
+ENDPOINT = os.environ.get("S3_ENDPOINT", "http://scality-s3:8000")
+PUBLIC_BASE = os.environ.get("PUBLIC_BASE", "https://s3.example.com/public")
 BUCKET = os.environ.get("S3_BUCKET", "public")
 PREFIX = os.environ.get("S3_PREFIX", "reachyn/")
 
@@ -20,7 +20,7 @@ VID = (".mp4", ".mov", ".webm", ".m4v")
 
 TPL = """<!doctype html><html lang=pt-br><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
-<title>Reachyn — Mídia gerada</title>
+<title>RedFoxCode — Mídia gerada</title>
 <style>
  body{background:#08060f;color:#eee;font-family:system-ui,sans-serif;margin:0;padding:24px}
  h1{font-weight:600;font-size:20px} h1 span{color:#7c7596;font-weight:400}
@@ -36,8 +36,8 @@ TPL = """<!doctype html><html lang=pt-br><head><meta charset=utf-8>
  button{background:#3a1f2e;color:#ffb3c1;border:1px solid #5a2a3c;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:11px}
  button:hover{background:#5a2a3c}
 </style></head><body>
-<h1>Reachyn — Mídia gerada <span>({{items|length}} arquivos · {{total}})</span></h1>
-<div class=bar>Acervo do bucket <b>{{bucket}}/{{prefix}}</b> · storage S3 · só seu IP</div>
+<h1>RedFoxCode — Mídia gerada <span>({{items|length}} arquivos · {{total}})</span></h1>
+<div class=bar>Acervo do bucket <b>{{bucket}}/{{prefix}}</b> · storage Scality (S3) · só seu IP</div>
 <div class=grid>
 {% for it in items %}
  <div class=card>

@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-// Providers de TEXTO (primário e alternativo) ganham base_url + model (endpoint + modelo do LLM).
+// Providers de TEXTO (minimax, ollama) ganham base_url + model (endpoint + modelo do LLM).
 // NÃO são secretos (api_key continua encrypted; base_url/model são texto puro em claro).
 return new class extends Migration
 {

@@ -23,7 +23,7 @@ return new class extends Migration
 
         // Sem privilégio de gerenciar roles → no-op (não trava o migrate; o role já existe em prod).
         $canManageRoles = (bool) DB::selectOne(
-            "SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolcreaterole)"
+            'SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolcreaterole)'
         );
         if (! $canManageRoles) {
             return;
@@ -33,7 +33,7 @@ return new class extends Migration
         if (! $exists) {
             $pw = env('DB_APP_PASSWORD') ?: env('DB_PASSWORD');
             if (! $pw) {
-                throw new \RuntimeException(
+                throw new RuntimeException(
                     'reachyn_app não existe e DB_APP_PASSWORD/DB_PASSWORD não definidos — '.
                     'defina a senha do role de aplicação antes de migrar.'
                 );

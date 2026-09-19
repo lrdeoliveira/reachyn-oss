@@ -40,7 +40,11 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            // ⚠️ retry_after DEVE ser MAIOR que o --timeout do queue:work (1300s no compose).
+            // Com o default 90s e 2 réplicas de worker, o 2º worker "roubava" o job longo ainda
+            // em execução (model sheet ~10-16 min) e estourava MaxAttemptsExceeded (tries=1) —
+            // regressão introduzida ao escalar workers pra 2 (2026-07-12).
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 1360),
             'after_commit' => false,
         ],
 

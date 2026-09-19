@@ -11,12 +11,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/config"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/genkeys"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/image"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/llm"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/speech"
-	"github.com/lrdeoliveira/reachyn-oss/engine/internal/provider/video"
+	"github.com/redfoxcode/reachyn/engine/internal/genkeys"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/image"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/llm"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/speech"
+	"github.com/redfoxcode/reachyn/engine/internal/provider/video"
 )
 
 // tokenOK valida o header X-Admin-Token contra s.admin (ENGINE_ADMIN_TOKEN, token
@@ -49,6 +48,13 @@ func (s *Server) setGenKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.cur.Store(s.build(set))
+	// 🐛 FALTAVA: o client de sprites NÃO era reconstruído aqui, então a chave salva no console
+	// nunca chegava no motor. `refreshSprite` só era chamado em New(), e com genkeys.Set{} VAZIO
+	// — ou seja, lia exclusivamente SPRITERRIFIC_API_KEY do ambiente. Salvar em "Chaves de
+	// geração" gravava, cifrava, empurrava... e o /v1/sprite/me seguia respondendo "chave não
+	// configurada", sem nenhuma pista de por quê. O próprio comentário do refreshSprite dizia
+	// "chamado no boot e a cada push de chaves": a segunda metade simplesmente não era verdade.
+	s.refreshSprite(set)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -74,27 +80,30 @@ func (s *Server) testKey(w http.ResponseWriter, r *http.Request) {
 }
 
 // testProvider faz uma chamada mínima por provedor pra validar a chave (sem gerar mídia paga).
-// Bases/modelos/endpoints vêm do env (config.Load) — white-label: nada de URL no código.
 func testProvider(ctx context.Context, provider, key string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	cfg := config.Load()
-	// Rótulos opacos (contrato de fio com o console) — casam com as tags JSON de genkeys.Set.
 	switch provider {
-	case "text":
-		// base/modelo de texto primário vêm do env.
-		_, err := llm.New("", key, llm.LLMConfig{TextBaseURL: cfg.TextBaseURL, TextModel: cfg.TextModel}).GenText(ctx, "", "ping", 2048)
+	case "minimax":
+		// LLMConfig vazio → defaults históricos (api.minimax.io + MiniMax-M2.7).
+		_, err := llm.New("", key, llm.LLMConfig{}).M3(ctx, "", "ping", 2048)
 		return err
-	case "text_alt":
-		// base/modelo de texto alternativo vêm do env.
-		_, err := llm.New(key, "", llm.LLMConfig{TextAltBaseURL: cfg.TextAltBaseURL, TextAltModel: cfg.TextAltModel}).AltChat(ctx, "", "ping", false)
+	case "ollama":
+		// LLMConfig vazio → defaults históricos (ollama.com + gemini-3-flash-preview).
+		_, err := llm.New(key, "", llm.LLMConfig{}).OllamaChat(ctx, "", "ping", false)
 		return err
-	case "voice":
-		return speech.New(key, speech.Config{BaseURL: cfg.SpeechBaseURL, Model: cfg.SpeechModel, APIKeyHeader: cfg.SpeechAPIKeyHeader}).Ping(ctx)
-	case "media":
-		return image.New(key, "", image.ImageConfig{GenURL: cfg.ImageGenURL, EditURL: cfg.ImageEditURL}).Ping(ctx)
-	case "premium":
-		return video.New("", key, video.VideoConfig{PremiumBaseURL: cfg.PremiumVideoBaseURL, PremiumModel: cfg.PremiumVideoModel, PremiumAuthHeader: cfg.PremiumVideoAuthHeader}).PingPremium(ctx)
+	case "elevenlabs":
+		return speech.New(key).Ping(ctx)
+	case "google":
+		return video.New(key).PingGoogle(ctx)
+	case "magnific":
+		return image.New("").WithMagnific(key).PingMagnific(ctx)
+	case "spriterrific":
+		// 🐛 `pingSprite` existia desde a integração e NUNCA foi chamado — o switch não tinha o
+		// caso, então "Testar" numa chave de sprites caía no default "provedor desconhecido".
+		// Função escrita, testada em ninguém: o operador só descobriria que a chave não presta
+		// na primeira geração, depois de já ter salvo.
+		return pingSprite(ctx, key)
 	default:
 		return fmt.Errorf("provedor desconhecido: %s", provider)
 	}
@@ -119,6 +128,11 @@ func (s *Server) SyncFromConsole(consoleURL string) {
 			var set genkeys.Set
 			if json.NewDecoder(resp.Body).Decode(&set) == nil {
 				s.cur.Store(s.build(set))
+				// Mesma omissão do setGenKeys: sem isto, um engine que REINICIA volta com o
+				// motor de sprites desligado mesmo com a chave salva no console — o boot-fetch
+				// traz a chave e a joga fora. Os dois caminhos que trocam chaves têm de trocar
+				// o client de sprites junto, senão ele fica preso no que o .env tinha no boot.
+				s.refreshSprite(set)
 				log.Printf("reachyn-engine: chaves de geração sincronizadas do console")
 			}
 			resp.Body.Close()

@@ -4,6 +4,22 @@
 #   · MÍDIA (ffmpeg-service + Scality) · AUTOMAÇÃO (Windmill + workers) · Postgres
 # A automação (agenda/gatilhos/encadear geração→aprovação→publish) vive no Windmill,
 # que chama o engine Go via HTTP. O engine NÃO substitui o Windmill — só o script de geração.
+#
+# ── TETO DE MEMÓRIA (mem_limit por serviço, desde 2026-08-29) ────────────────────────────────
+# Até a auditoria de 29/08, NENHUM serviço tinha limite: o `docker stats` mostrava os 31,34 GiB
+# do host como teto de cada container. Esta VPS hospeda Reachyn e Nexusyn lado a lado, então um
+# vazamento em qualquer worker daqui derrubava o Nexusyn junto — e há 4 réplicas de worker-anim.
+# Os containers do Nexusyn já tinham limites; estes não.
+#
+# O limite é CONTENÇÃO, não reserva: o Docker só mata quando o container passa do teto, e a soma
+# dos tetos (23,6 GB) pode exceder o uso real somado (~1,5 GB medido) sem problema nenhum.
+# Dimensionado a partir do uso em repouso medido em 29/08, com folga proporcional ao pico que
+# cada serviço pode ter — generoso em quem transcodifica vídeo ou renderiza 3D, apertado em quem
+# serve arquivo estático. O comentário de cada serviço registra a medição que originou o número.
+#
+# ⚠️ AO AJUSTAR: apertar demais troca um risco por outro — em vez de vazamento lento, um OOM kill
+# no meio de uma geração já paga. Se algum serviço começar a morrer, o sintoma é `docker inspect
+# <ct> --format '{{.State.OOMKilled}}'` = true; suba o teto DELE em vez de remover a política.
 name: reachyn
 
 networks:
@@ -26,9 +42,11 @@ volumes:
   # media_minio_data (volume do Scality AGPL antigo) preservado fora do compose como rollback histórico.
 
 services:
-  landing:           # site institucional — estático nginx
+  landing:           # site institucional (example.com) — estático nginx
     build: ./landing
     restart: unless-stopped
+    # nginx servindo 7 arquivos estáticos; medido 7,6 MiB
+    mem_limit: 128m
     networks: [traefik]
     labels:
       - traefik.enable=true
@@ -37,24 +55,47 @@ services:
       - traefik.http.routers.reachyn-landing.rule=Host(`example.com`) || Host(`www.example.com`)
       - traefik.http.routers.reachyn-landing.tls.certresolver=letsencrypt
       - traefik.http.routers.reachyn-landing.middlewares=reachyn-sec@docker   # AUD-027: security headers (HSTS/nosniff/frameDeny/referrer)
-      - traefik.http.services.reachyn-landing.loadbalancer.server.port=80
+      - traefik.http.services.reachyn-landing.loadbalancer.server.port=8080   # nginx-unprivileged (não-root) escuta na 8080
 
   postgres:
-    image: postgres:17
+    # ⚠️ 17→18 foi MAJOR (2026-08-28): o data dir do pg17 NÃO sobe no pg18. A migração
+    # foi feita por dump/restore com o volume antigo preservado; não basta trocar a tag.
+    #
+    # ⚠️ E o MOUNT MUDOU DE LUGAR no pg18: a imagem oficial passou a guardar os dados
+    # em subpasta por major (/var/lib/postgresql/18/docker) e espera o volume montado
+    # em /var/lib/postgresql — NÃO mais em /var/lib/postgresql/data. Com o mount antigo
+    # o container sobe em crashloop dizendo "there appears to be PostgreSQL data in
+    # /var/lib/postgresql/data (unused mount/volume)". Ver docker-library/postgres#1259.
+    image: postgres:18
     restart: unless-stopped
+    # medido 99 MiB, mas shared_buffers + cache crescem com o uso
+    mem_limit: 2g
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-reachyn}
       POSTGRES_USER: ${POSTGRES_USER:-reachyn}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}   # AUD-017: fail-closed (sem fallback 'change-me')
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql          # pg18+: mount na raiz, não em /data (ver nota acima)
     networks: [reachyn-net]
 
-  console:           # Laravel + Filament (identidade, multi-tenant, back-office)
+  console:           # Laravel + Filament (identidade, billing/Cashier, multi-tenant, back-office)
     build: ./console
     restart: unless-stopped
+    # nginx + php-fpm + supervisor; medido 85 MiB
+    mem_limit: 1g
     env_file: .env
+    # LOG em STDERR: o container NÃO tem mount pra /app/storage, então storage/logs/laravel.log
+    # vivia na camada efêmera e SUMIA a cada deploy — em prod era impossível diagnosticar
+    # qualquer coisa por log. stderr é o canal correto em container: o Docker captura e
+    # `docker compose logs` mostra. (Achado 2026-07-21, caçando um bug com log cego.)
+    environment:
+      LOG_CHANNEL: stderr
     depends_on: [postgres]
+    # Alcança o cli-bridge no HOST (sidecar systemd) só pra LER o /health e listar os
+    # refinadores de prompt vivos na UI. A geração em si passa pelo engine, que é quem
+    # tem o BRIDGE_TOKEN — o console não precisa do token e não o recebe.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # AUD-001: SEM publicação de porta no host (era ["8210:8000"], exposto à internet por HTTP puro).
     #   O console entra na rede traefik e é roteado por TLS via labels abaixo — não precisa de ports:.
     #   Para debug local, descomente bindando SÓ em loopback:
@@ -74,34 +115,107 @@ services:
       - traefik.http.routers.reachyn-console.middlewares=reachyn-sec@docker,reachyn-csp-console@docker
       - traefik.http.services.reachyn-console.loadbalancer.server.port=8000
 
-  worker:            # fila Laravel (dublagem e jobs assíncronos de mídia)
+  # ⚠️ Duas filas, dois pools. `worker` NÃO consome 'animation' de propósito: é o que garante que
+  # publicar/gerar personagem/story/filme nunca fique atrás de um desenho inteiro. E `worker-anim`
+  # consome 'animation,default' — se não houver desenho na fila, ele ajuda no resto em vez de ficar
+  # parado. Se um dia algum job de animação sair sem onQueue('animation'), ele cai em 'default' e
+  # roda no pool errado (mais lento), mas NÃO some: os dois pools cobrem 'default'.
+  worker:            # fila Laravel: publicação, personagens, story, filme (tudo menos animação)
     build: ./console
     restart: unless-stopped
-    command: php artisan queue:work --tries=1 --timeout=1300
+    # medido 52 MiB; o pico é o PHP montando payload de mídia
+    mem_limit: 1g
+    # --tries=1 é o default de quem NÃO declara $tries na classe; job com $tries próprio vence a CLI
+    # (AnimationSceneJob=2, GenerateModelSheetJob=3), então não leia este 1 como "nada retenta".
+    command: php artisan queue:work --queue=default --tries=1 --timeout=1300
+    # O HEALTHCHECK da imagem (GET /up) só vale pro console (nginx na 8000) — worker não
+    # tem servidor HTTP; sem o override ele ficaria eternamente unhealthy.
+    healthcheck:
+      disable: true
     env_file: .env
+    # LOG em STDERR: o container NÃO tem mount pra /app/storage, então storage/logs/laravel.log
+    # vivia na camada efêmera e SUMIA a cada deploy — em prod era impossível diagnosticar
+    # qualquer coisa por log. stderr é o canal correto em container: o Docker captura e
+    # `docker compose logs` mostra. (Achado 2026-07-21, caçando um bug com log cego.)
+    environment:
+      LOG_CHANNEL: stderr
     depends_on: [postgres]
     networks: [reachyn-net]
+    deploy:
+      mode: replicated
+      replicas: 2
 
-  scheduler:         # Laravel scheduler — dispara as tarefas agendadas em routes/console.php
-    build: ./console #   a cada minuto (schedule:work).
-    command: php artisan schedule:work
+  worker-anim:       # SÓ o fan-out do Estúdio de Animação (ver o comentário das duas filas acima)
+    build: ./console
+    restart: unless-stopped
+    # medido 52 MiB — IO-bound, espera o provedor; 4 réplicas
+    mem_limit: 1g
+    # 'animation' primeiro: só encosta em 'default' quando não há desenho na fila — assim a réplica
+    # ociosa ajuda no resto em vez de ficar parada, sem nunca atrasar a animação.
+    command: php artisan queue:work --queue=animation,default --tries=1 --timeout=1300
+    healthcheck:
+      disable: true
     env_file: .env
+    # LOG em STDERR: o container NÃO tem mount pra /app/storage, então storage/logs/laravel.log
+    # vivia na camada efêmera e SUMIA a cada deploy — em prod era impossível diagnosticar
+    # qualquer coisa por log. stderr é o canal correto em container: o Docker captura e
+    # `docker compose logs` mostra. (Achado 2026-07-21, caçando um bug com log cego.)
+    environment:
+      LOG_CHANNEL: stderr
+    depends_on: [postgres]
+    networks: [reachyn-net]
+    deploy:
+      mode: replicated
+      # O trabalho aqui é IO-BOUND: o AnimationSceneJob passa 8-14min BLOQUEADO num Http::post
+      # esperando o provedor de IA — CPU ~0%, 50MB de RAM (medido em prod 2026-07-15). Réplica a
+      # mais custa ~nada; o que ela compra é paralelismo: com 2, um desenho de 6 cenas processava
+      # 2 a 2 e levava ~2h (medido, projeto #11: 1h55).
+      #
+      # ⚠️ O teto NÃO é a VPS (8 CPUs, 27GB livres) — é a concorrência que o provedor aceita.
+      # Subir demais troca "lento" por 429. Por isso 4 e não 8: dobra o paralelismo com margem.
+      # Antes de subir mais, medir 429 nos logs. (Com tries=2 um 429 não mata mais a cena na hora,
+      # mas queima a 2ª tentativa — o teto continua sendo o provedor, não a máquina.)
+      replicas: 4
+
+  scheduler:         # Laravel scheduler — dispara o reachyn:reconcile-subscriptions (AUD-014) e
+    build: ./console #   demais tarefas agendadas em routes/console.php a cada minuto (schedule:work).
+    command: php artisan schedule:work
+    healthcheck:
+      disable: true   # sem servidor HTTP — mesmo motivo do worker
+    env_file: .env
+    # LOG em STDERR: o container NÃO tem mount pra /app/storage, então storage/logs/laravel.log
+    # vivia na camada efêmera e SUMIA a cada deploy — em prod era impossível diagnosticar
+    # qualquer coisa por log. stderr é o canal correto em container: o Docker captura e
+    # `docker compose logs` mostra. (Achado 2026-07-21, caçando um bug com log cego.)
+    environment:
+      LOG_CHANNEL: stderr
     depends_on: [postgres]
     networks: [reachyn-net]
     restart: unless-stopped
+    # medido 51 MiB; só dispara comandos agendados
+    mem_limit: 512m
 
   engine:            # Go — geração de conteúdo + jobs de mídia + providers
     build: ./engine
     restart: unless-stopped
+    # medido 4,6 MiB em repouso, mas segura imagens de até 60 MB em memória (CliTool/persist), várias em paralelo
+    mem_limit: 2g
     env_file: .env
     depends_on: [postgres]
     # AUD-001: SEM publicação de porta no host (era ["8080:8080"], expunha o engine de geração
     #   SEM auth à internet — ver AUD-002). O engine é interno: só o console/web o chamam pela
     #   reachyn-net por nome de serviço (engine:8080). Para debug local: ["127.0.0.1:8080:8080"].
     networks: [reachyn-net]
+    # cli-bridge (tools/cli-bridge): sidecar systemd no HOST que executa CLIs de imagem (mmx).
+    # host-gateway = IP do docker0 — o bridge binda nele (e em 127.0.0.1), nunca 0.0.0.0.
+    # Env: CLI_BRIDGE_URL=http://host.docker.internal:3921 + CLI_BRIDGE_TOKEN (no .env).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   web:               # Next.js — Conteúdo + Studio (chama só o console; engine fica interno)
     restart: unless-stopped
+    # Next.js em produção; medido 80 MiB
+    mem_limit: 1g
     build:
       context: ./web
       args:
@@ -137,7 +251,17 @@ services:
       # Filament usa Alpine.js ('unsafe-eval') + scripts/estilos inline ('unsafe-inline').
       # img-src libera o S3 da mídia. Ajuste fino pode ser necessário testando o painel
       # (ex.: se algum asset/CDN externo for adicionado, incluí-lo no connect-src/script-src).
-      - "traefik.http.middlewares.reachyn-csp-console.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://s3.example.com; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+      #
+      # ⚠️ POR QUE 'unsafe-eval' FICA (auditoria 2026-08-07): o Alpine.js avalia as expressões dos
+      # atributos x-* com `new Function`, e é assim que o Filament inteiro funciona. Tirar derruba
+      # o painel /admin E o dashboard do cliente. A saída real seria o build CSP do Alpine, que o
+      # Filament não suporta de fábrica — projeto próprio, não ajuste de header. NÃO é o caso do
+      # app Next.js: lá o 'unsafe-eval' já sai em produção (next.config.ts, devOnly()).
+      #
+      # `form-action 'self'` (2026-08-07): o web já tinha, o console não. Sem ele, um <form>
+      # injetado no painel poderia postar credencial ou dado do cliente pra um domínio de fora —
+      # frame-ancestors barra o clickjacking, mas não o envio.
+      - "traefik.http.middlewares.reachyn-csp-console.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://s3.example.com; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
 
   # ───────── AUTOMAÇÃO — Windmill APOSENTADO (2026-06-13) ─────────
   # O sistema novo não usa Windmill: geração = engine Go; fila de aprovação e publish = nativos
@@ -165,6 +289,8 @@ services:
       - scality-meta:/usr/src/app/localMetadata   # external: scality_scality-meta (metadados)
     networks: [reachyn-net, traefik]
     restart: unless-stopped
+    # o maior em repouso (500 MiB) — é o servidor de objetos
+    mem_limit: 2g
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
@@ -187,6 +313,8 @@ services:
     depends_on: [scality]
     networks: [reachyn-net, traefik]
     restart: unless-stopped
+    # Flask read-only; medido 107 MiB
+    mem_limit: 512m
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik
@@ -203,22 +331,73 @@ services:
   ffmpeg-service:
     build: ./media/ffmpeg-service
     restart: unless-stopped
+    # TETO MAIS ALTO de propósito: transcodifica vídeo e recebe payloads de até 80 MB no persist-bytes
+    mem_limit: 4g
     environment:
       S3_ENDPOINT: ${S3_INTERNAL_ENDPOINT:-http://scality-s3:8000}   # upload interno (Scality)
       S3_KEY: ${S3_KEY:?defina (S3 access key, = red…)}
       S3_SECRET: ${S3_SECRET:?defina (S3 secret)}
       S3_BUCKET: ${MEDIA_S3_BUCKET:-public}
       S3_PUBLIC_BASE: ${MEDIA_S3_PUBLIC_BASE:-https://s3.example.com}/public
-      SPEECH_API_KEY: ${SPEECH_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       BGUTIL_POT_BASE_URL: http://bgutil-pot:4416                      # PO token YouTube (sidecar)
       FFMPEG_SERVICE_TOKEN: ${FFMPEG_SERVICE_TOKEN:?defina FFMPEG_SERVICE_TOKEN}  # X-Service-Token (AUD-008)
+      # 🎞️ Legenda animada (overlay Remotion). Sem CAPTION_TOKEN o recurso fica DESLIGADO e o
+      # /shortform cai no fallback (legenda ASS queimada) — nunca quebra por causa do serviço novo.
+      CAPTION_URL: http://caption-service:3979
+      CAPTION_TOKEN: ${CAPTION_SERVICE_TOKEN:-}
     depends_on: [bgutil-pot, scality]
     networks: [reachyn-net]
+
+  # caption-service: render Remotion da LEGENDA ANIMADA (WebM VP8+alpha). Só o ffmpeg-service
+  # fala com ele (rede interna, SEM porta publicada; X-Service-Token obrigatório — o container
+  # nem sobe sem token). Render é CPU-bound: concurrency 2 pra não disputar com o ffmpeg.
+  caption-service:
+    build: ./media/caption-service
+    restart: unless-stopped
+    # medido 40 MiB; transcrição carrega modelo na memória
+    mem_limit: 1g
+    environment:
+      CAPTION_SERVICE_TOKEN: ${CAPTION_SERVICE_TOKEN:?defina CAPTION_SERVICE_TOKEN (openssl rand -hex 32)}
+      CAPTION_RENDER_CONCURRENCY: "2"
+    networks: [reachyn-net]
+
+  # blender-bridge: Blender 5.2 LTS HEADLESS (estúdio 3D — turntable, 8 direções, âncora de
+  # ângulo, limpeza de malha). É ESTE serviço que faz o 3D funcionar na VPS: antes o bridge só
+  # existia como processo no Mac do operador (LaunchAgent) e em prod o /v1/mesh/render dava 502.
+  # Só o ENGINE fala com ele, pela reachyn-net, por nome de serviço — SEM porta publicada no
+  # host (guideline #11; para debug local use ["127.0.0.1:3922:3922"]).
+  # No .env do engine: BLENDER_BRIDGE_URL=http://blender-bridge:3922 + o MESMO token.
+  # ⚠️ VPS sem GPU: o EEVEE renderiza por rasterizador de software (mais lento; se um dia o
+  # contexto de GPU faltar de vez, a receita cai sozinha pro BLENDER_WORKBENCH, com perda de
+  # qualidade). Render é CPU-bound e o bridge já serializa (um render por vez).
+  blender-bridge:
+    build: ./tools/blender-bridge
+    restart: unless-stopped
+    # renderização 3D — picos altos por natureza, medido 29 MiB parado
+    mem_limit: 3g
+    environment:
+      # Sem token o processo NÃO sobe (fail-closed) — mesmo padrão do caption-service.
+      BLENDER_BRIDGE_TOKEN: ${BLENDER_BRIDGE_TOKEN:?defina BLENDER_BRIDGE_TOKEN (openssl rand -hex 32)}
+      # Allowlist anti-SSRF do download do .glb — o default do código já é o nosso storage;
+      # explícito aqui pra ficar auditável no compose.
+      BLENDER_BRIDGE_MEDIA_HOSTS: ${BLENDER_BRIDGE_MEDIA_HOSTS:-s3.example.com,media.example.com}
+    networks: [reachyn-net]
+    # /health não exige token e devolve a versão do Blender detectada — se o binário sumir da
+    # imagem, o container fica unhealthy em vez de aceitar render e falhar no meio.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3922/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # bgutil-pot: provedor de PO token p/ YouTube (yt-dlp anti-bot, SEM cookie).
   bgutil-pot:
     # AUD-028: tag de versão fixa (não usar a implícita :latest).
     # TODO confirmar digest sha256 exata desta tag (docker buildx imagetools inspect / pin @sha256:…)
-    image: brainicism/bgutil-ytdlp-pot-provider:1.1.0
+    image: brainicism/bgutil-ytdlp-pot-provider:1.3.2
     restart: unless-stopped
+    # provider de PO token do yt-dlp; medido 90 MiB
+    mem_limit: 512m
     networks: [reachyn-net]

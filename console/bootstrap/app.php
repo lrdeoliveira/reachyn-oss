@@ -36,6 +36,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', \App\Http\Middleware\SetCurrentTenant::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\SetCurrentTenant::class);
 
+        // Gates de cota (aliases). No OSS o bloqueio real é o saldo local.
+        $middleware->alias([
+            'subscribed' => \App\Http\Middleware\EnsureSubscribed::class,
+            // Freemium: pesquisa/resumo liberados também em trial válido (signup self-service).
+            'trial-or-subscribed' => \App\Http\Middleware\EnsureTrialOrSubscribed::class,
+            // Recurso premium (exclusivo do plano Studio): Histórias.
+            'premium' => \App\Http\Middleware\EnsurePremiumPlan::class,
+            // Publicação: conectar rede + publicar.
+            'publishing' => \App\Http\Middleware\EnsurePublishing::class,
+        ]);
+
         // Não há rota 'login' genérica: o login do cliente é o painel Filament /app.
         $middleware->redirectGuestsTo(fn () => route('filament.app.auth.login'));
     })

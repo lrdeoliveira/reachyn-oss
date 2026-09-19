@@ -1,6 +1,8 @@
 "use client";
 
 import { RichTextArea } from "@/components/RichTextArea";
+import { Modal } from "@/components/ui/Modal";
+import { SkeletonCards } from "@/components/ui/Spinner";
 import { sfetch } from "@/lib/api";
 import { useEffect, useState } from "react";
 
@@ -56,6 +58,7 @@ export default function AprovacoesPage() {
       <p className="sub">Peças prontas esperando seu OK. Aprove para publicar nas redes, ou rejeite.</p>
 
       {err && <div className="err">Não consegui carregar a fila: {err}.</div>}
+      {loading && items.length === 0 && !err && <SkeletonCards n={3} />}
       {!loading && items.length === 0 && !err && (
         <div className="empty">Nenhuma peça na fila agora. Crie conteúdo em Conteúdo/Mídia e envie para aprovação. ✨</div>
       )}
@@ -117,29 +120,28 @@ function EditModal({ item, onClose, onSaved }: { item: Approval; onClose: () => 
     setBusy(false);
   }
 
+  // S4: usa o <Modal> do kit — ganha Esc, foco preso e scroll lock de graça.
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 14, padding: 20, width: "min(720px,95vw)", maxHeight: "88vh", overflow: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10 }}>
-          <strong style={{ fontSize: "1.05rem", color: "var(--peach)" }}>Revisar peça</strong>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn ok" style={{ flex: "none", padding: "6px 14px" }} disabled={busy || !dirty} onClick={salvar}>{busy ? "Salvando…" : "💾 Salvar"}</button>
-            <button className="btn edit" style={{ flex: "none", padding: "6px 12px" }} onClick={onClose}>Fechar</button>
-          </div>
+    <Modal onClose={onClose} label="Revisar peça" maxWidth={720}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10 }}>
+        <strong style={{ fontSize: "1.05rem", color: "var(--peach)" }}>Revisar peça</strong>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn ok" style={{ flex: "none", padding: "6px 14px" }} disabled={busy || !dirty} onClick={salvar}>{busy ? "Salvando…" : "💾 Salvar"}</button>
+          <button className="btn edit" style={{ flex: "none", padding: "6px 12px" }} onClick={onClose}>Fechar</button>
         </div>
-
-        {item.image_url && <img src={item.image_url} alt={keyword} style={{ width: "100%", borderRadius: 10, marginBottom: 14, display: "block" }} />}
-        {item.video_url && <video src={item.video_url} controls style={{ width: "100%", borderRadius: 10, marginBottom: 14 }} />}
-
-        <label className="txt" style={{ color: "var(--muted)", fontSize: ".82rem", display: "block", marginBottom: 4 }}>Tema</label>
-        <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="tema da peça"
-          style={{ background: "var(--bg2)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px", fontSize: ".95rem", width: "100%", marginBottom: 12 }} />
-
-        <label className="txt" style={{ color: "var(--muted)", fontSize: ".82rem", display: "block", marginBottom: 4 }}>Texto</label>
-        <RichTextArea value={text} onChange={setText} placeholder="Texto da peça…" />
-
-        {msg && <p className="txt" style={{ marginTop: 12, fontSize: ".95rem" }}>{msg}</p>}
       </div>
-    </div>
+
+      {item.image_url && <img src={item.image_url} alt={keyword} style={{ width: "100%", borderRadius: 10, marginBottom: 14, display: "block" }} />}
+      {item.video_url && <video src={item.video_url} controls style={{ width: "100%", borderRadius: 10, marginBottom: 14 }} />}
+
+      <label className="txt" style={{ color: "var(--muted)", fontSize: ".82rem", display: "block", marginBottom: 4 }}>Tema</label>
+      <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="tema da peça"
+        style={{ background: "var(--bg2)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px", fontSize: ".95rem", width: "100%", marginBottom: 12 }} />
+
+      <label className="txt" style={{ color: "var(--muted)", fontSize: ".82rem", display: "block", marginBottom: 4 }}>Texto</label>
+      <RichTextArea value={text} onChange={setText} placeholder="Texto da peça…" />
+
+      {msg && <p className="txt" style={{ marginTop: 12, fontSize: ".95rem" }}>{msg}</p>}
+    </Modal>
   );
 }

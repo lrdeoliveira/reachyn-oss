@@ -1,0 +1,140 @@
+# CI de build/test/lint — complementa o security-audit.yml (que só roda scanners).
+#
+# Um job por stack, disparado só quando a stack muda (paths-filter). Todos os gates
+# BLOQUEIAM: diferente do security-audit, aqui não há `|| true`.
+#
+# Actions pinadas por SHA (supply chain) — o comentário ao lado é a tag correspondente.
+name: ci
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Descobre quais stacks mudaram — evita rodar os 3 jobs a cada push de doc.
+  changes:
+    name: Detecta stacks alteradas
+    runs-on: ubuntu-latest
+    outputs:
+      console: ${{ steps.filter.outputs.console }}
+      engine: ${{ steps.filter.outputs.engine }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050 # v3
+        id: filter
+        with:
+          filters: |
+            console:
+              - 'console/**'
+              - '.github/workflows/ci.yml'
+            engine:
+              - 'engine/**'
+              - '.github/workflows/ci.yml'
+            web:
+              - 'web/**'
+              - '.github/workflows/ci.yml'
+
+  # --------------------------------------------------------------- console
+  console:
+    name: console (Laravel) — test
+    needs: changes
+    if: needs.changes.outputs.console == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: console
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          # 8.4 = a mesma major da imagem de prod (php:8.4-fpm-alpine).
+          php-version: "8.4"
+          # As do console/Dockerfile + sqlite (a suíte roda em :memory:, ver phpunit.xml).
+          extensions: pdo_pgsql, pdo_sqlite, sqlite3, bcmath, intl, gd, exif, zip, mbstring
+          coverage: none
+      - name: composer install
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: phpstan (Larastan) — análise estática
+        # GATE, não informativo. O console não tinha equivalente do `tsc` (web) nem do
+        # `go vet` (engine) — foi por isso que `EngineClient::paraGeracao()` ficou meses
+        # sendo CHAMADO sem existir, quebrando 3 jobs em runtime. Nível 3, sem baseline.
+        # Ver o cabeçalho de console/phpstan.neon pro racional do nível.
+        run: composer analyse
+      - name: php artisan test
+        # Sem serviço de banco de propósito: phpunit.xml fixa DB_CONNECTION=sqlite,
+        # DB_DATABASE=:memory: e um APP_KEY de teste. 317 testes em ~3,5 min (o "~0,3s" que este
+        # comentário dizia era verdade quando a suíte tinha um punhado de casos). O memory_limit
+        # vem do phpunit.xml: no padrão de 128M o processo morre com "Premature end of PHP
+        # process" perto do fim.
+        run: php artisan test
+
+  # ---------------------------------------------------------------- engine
+  engine:
+    name: engine (Go) — build + test
+    needs: changes
+    if: needs.changes.outputs.engine == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: engine
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          # DEVE bater com o `go` do engine/go.mod. Ficou em 1.26.3 depois que o stack update de
+          # 2026-08-28 levou o go.mod para 1.27.0 — e o comentário aqui continuou afirmando que
+          # batia. Go 1.26 se recusa a compilar um módulo que declara 1.27, então o job quebraria
+          # no primeiro `go build`; ninguém viu porque o workflow está desligado desde 23/07.
+          go-version: "1.27.0"
+          # go.mod não declara nenhuma dependência (stdlib pura) → não há go.sum,
+          # e o cache padrão do setup-go aborta quando não acha o arquivo.
+          cache: false
+      - name: go build
+        run: go build ./...
+      - name: go test
+        run: go test ./...
+
+  # ------------------------------------------------------------------- web
+  web:
+    name: web (Next.js) — lint + build
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          # DEVE bater com o web/Dockerfile (hoje node:26-alpine). Mesma defasagem do Go: o stack
+          # update de 2026-08-28 subiu a imagem para 26 e deixou o CI em 24.
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: npm ci
+        run: npm ci
+      - name: eslint (informativo — NÃO bloqueia)
+        # Débito preexistente medido em 2026-07-15: 78 problemas (46 errors, 32 warnings).
+        # Concentrado em react-hooks/set-state-in-effect (24), react-hooks/refs (12) e
+        # @next/next/no-img-element (28 warn). Como gate, o CI nasceria vermelho e seria
+        # ignorado — então reporta no log, igual ao semgrep do security-audit.yml.
+        # Quando zerar: tirar o `|| true` e virar gate de verdade.
+        run: npx eslint || true
+      - name: next build
+        # O web não tem suíte de testes — o build É o gate (pega erro de TS/import/rota).
+        env:
+          # Inlinada em build time (web/Dockerfile a declara como ARG). No CI só precisa
+          # existir pra o build resolver; a URL real entra no build da imagem.
+          NEXT_PUBLIC_CONSOLE_URL: https://console.ci.invalid
+        run: npx next build
