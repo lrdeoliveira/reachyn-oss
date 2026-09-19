@@ -1,0 +1,9 @@
+# example.com — site público (landing + páginas legais).
+#
+# O app fica em app.example.com, atrás de login, e não é servido por aqui: não há o que
+# rastrear lá, e apontar o caminho só ajudaria quem varre em busca de superfície.
+User-agent: *
+Allow: /
+Disallow: /dpa.html
+
+Sitemap: https://example.com/sitemap.xml

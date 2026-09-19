@@ -7,9 +7,100 @@ type Provider = { key: string; label: string; group?: string; desc: string; free
 
 const card = { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 16 } as const;
 const inp = { background: "var(--bg2)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px", fontSize: ".9rem", width: "100%" } as const;
-const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginTop: 12 } as const;
+const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 14, marginTop: 12 } as const;
 const badgeOn = { fontSize: ".72rem", color: "#22c55e", border: "1px solid #22c55e", borderRadius: 12, padding: "1px 8px" } as const;
 const badgeOff = { fontSize: ".72rem", color: "var(--muted)", border: "1px solid var(--line)", borderRadius: 12, padding: "1px 8px" } as const;
+
+type Saldo = {
+  id: string; label: string;
+  tipo: "creditos" | "caracteres" | null;
+  saldo: number | null; limite?: number | null; usado?: number | null;
+  unidade: string | null; reset_em?: string | null; plano?: string | null;
+  ok: boolean; erro?: string | null;
+};
+
+const num = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+
+/**
+ * Saldo REAL das contas nos PROVEDORES — dinheiro/cota na conta deles, NÃO a cota do plano do
+ * cliente (isso é a página Plano & Uso). Quando esse número zera, a geração paga para de
+ * funcionar e o sintoma chega como "geração falhando" — ver o saldo aqui encurta o diagnóstico.
+ *
+ * Fica só nesta página porque ela inteira é de operador (o endpoint devolve 403 pro resto):
+ * o painel cita provedor pelo nome, o que fere o white-label se vazar pra cliente.
+ */
+function SaldosSection() {
+  const [itens, setItens] = useState<Saldo[]>([]);
+  const [estado, setEstado] = useState<"carregando" | "pronto" | "falhou">("carregando");
+
+  const load = useCallback(() => {
+    sfetch("/api/admin/provider-balances")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.provedores) { setItens(d.provedores); setEstado("pronto"); }
+        else setEstado("falhou");
+      })
+      .catch(() => setEstado("falhou"));
+  }, []);
+  useEffect(load, [load]);
+
+  return (
+    <section style={{ marginBottom: 26 }}>
+      <h2 style={{ fontSize: "1.05rem", margin: "0 0 4px" }}>Saldo nos provedores</h2>
+      <p className="txt" style={{ color: "var(--muted)", fontSize: ".84rem", margin: "0 0 4px" }}>
+        Crédito real na conta de cada provedor — não é a cota de plano do cliente. Atualiza a cada minuto.
+      </p>
+      <button className="btn" style={{ flex: "none", padding: "5px 12px", fontSize: ".78rem" }} onClick={load}>Atualizar</button>
+
+      {estado === "carregando" && <p className="txt" style={{ color: "var(--muted)", marginTop: 12 }}>Consultando provedores…</p>}
+      {estado === "falhou" && <p className="txt" style={{ color: "#fca5a5", marginTop: 12 }}>Não foi possível carregar os saldos.</p>}
+
+      {estado === "pronto" && (
+        <div style={grid}>
+          {itens.map((s) => {
+            const pct = s.ok && s.limite ? Math.min(100, Math.round(((s.saldo ?? 0) / s.limite) * 100)) : null;
+            // Créditos: abaixo de 1000 já merece atenção. Cota: menos de 15% restante.
+            const baixo = s.ok && (pct !== null ? pct < 15 : (s.saldo ?? 0) < 1000);
+            const cor = !s.ok ? "var(--muted)" : baixo ? "#fca5a5" : "var(--text)";
+            return (
+              <div key={s.id} style={{ ...card, borderColor: baixo ? "rgba(239,68,68,.45)" : "var(--line)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <strong style={{ fontSize: ".95rem" }}>{s.label}</strong>
+                  <span style={s.ok ? badgeOn : badgeOff}>{s.ok ? (s.tipo === "caracteres" ? "cota" : "créditos") : "indisponível"}</span>
+                </div>
+
+                {s.ok ? (
+                  <>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 600, color: cor, marginTop: 8 }}>
+                      {num(s.saldo ?? 0)} <span style={{ fontSize: ".78rem", fontWeight: 400, color: "var(--muted)" }}>{s.unidade}{s.limite ? " restantes" : ""}</span>
+                    </div>
+                    {s.limite != null && (
+                      <>
+                        <div style={{ height: 6, borderRadius: 4, background: "var(--bg2)", marginTop: 10, overflow: "hidden" }}>
+                          <div style={{ width: `${pct ?? 0}%`, height: "100%", background: baixo ? "#ef4444" : "#22c55e" }} />
+                        </div>
+                        <p className="txt" style={{ color: "var(--muted)", fontSize: ".76rem", margin: "6px 0 0" }}>
+                          {num(s.usado ?? 0)} de {num(s.limite)} usados ({pct}% livre){s.plano ? ` · plano ${s.plano}` : ""}
+                        </p>
+                      </>
+                    )}
+                    {s.reset_em && (
+                      <p className="txt" style={{ color: "var(--muted)", fontSize: ".76rem", margin: "4px 0 0" }}>
+                        Renova em {new Date(s.reset_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="txt" style={{ color: "var(--muted)", fontSize: ".8rem", margin: "10px 0 0" }}>{s.erro || "Saldo não disponível."}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 
 /** Seção de chaves do operador (Geração e Publicação compartilham a mesma API admin). */
 function AdminSection({ base, title, subtitle, guide }: { base: string; title: string; subtitle: string; guide?: { intro: string; steps: string[]; note?: string } }) {
@@ -134,33 +225,30 @@ function AdminSection({ base, title, subtitle, guide }: { base: string; title: s
 // Cada FUNÇÃO tem uma linha PRINCIPAL e uma de RESERVA (fallback). A chave é por
 // PROVEDOR (não por linha): se um provedor é usado em duas linhas, a chave é a mesma.
 
-type SearchProviderKey = "search-primary" | "search-alt" | "reader" | "scraper";
+type SearchProviderKey = "tavily" | "brave" | "jina" | "scrapecreators";
 type SearchFnKey = "normal" | "deep" | "scraper";
 type LinePair = { primary: string; fallback: string };
 type SearchLines = Record<SearchFnKey, LinePair>;
 
-// As keys (search-primary/search-alt/reader/scraper) são o CONTRATO DE FIO com o engine
-// (provider das chaves BYOK) — NÃO renomear. Os `label`/`url` são genéricos (white-label):
-// a UI mostra "Busca A/B/C/D", sem citar marca. `url` omitido = sem link "obter chave" externo.
 const SEARCH_PROVIDER_META: Record<SearchProviderKey, { label: string; placeholder: string; url?: string }> = {
-  "search-primary": { label: "Busca A", placeholder: "cole sua chave" },
-  "search-alt": { label: "Busca B", placeholder: "cole sua chave" },
-  reader: { label: "Busca C (Leitor & Busca)", placeholder: "cole sua chave" },
-  scraper: { label: "Busca D (conteúdo social)", placeholder: "cole sua chave" },
+  tavily: { label: "Tavily", placeholder: "tvly-…", url: "https://tavily.com" },
+  brave: { label: "Brave Search", placeholder: "BSA…", url: "https://brave.com/search/api/" },
+  jina: { label: "Jina (Leitor & Busca)", placeholder: "jina_…", url: "https://jina.ai" },
+  scrapecreators: { label: "ScrapeCreators", placeholder: "cole sua chave", url: "https://scrapecreators.com" },
 };
 
 // Provedores VÁLIDOS por função (1º item = recomendado por padrão; o backend confirma em `recommended`).
 const SEARCH_FUNCTIONS: { key: SearchFnKey; label: string; desc: string; providers: SearchProviderKey[] }[] = [
-  { key: "normal", label: "Busca web", desc: "Busca rápida na internet — alimenta posts e roteiros.", providers: ["search-primary", "search-alt", "reader"] },
-  { key: "deep", label: "Pesquisa profunda", desc: "Investiga a fundo e gera um relatório com as fontes.", providers: ["reader", "search-primary"] },
-  { key: "scraper", label: "Conteúdo social", desc: "Lê perfis de redes sociais (Instagram, TikTok, X, YouTube).", providers: ["scraper"] },
+  { key: "normal", label: "Busca web", desc: "Busca rápida na internet — alimenta posts e roteiros.", providers: ["tavily", "brave", "jina"] },
+  { key: "deep", label: "Pesquisa profunda", desc: "Investiga a fundo e gera um relatório com as fontes.", providers: ["jina", "tavily"] },
+  { key: "scraper", label: "Conteúdo social", desc: "Lê perfis de redes sociais (Instagram, TikTok, X, YouTube).", providers: ["scrapecreators"] },
 ];
 
-// Tabela de recomendação (didática, sem jargão de código nem nome de marca).
+// Tabela de recomendação (didática, sem jargão de código).
 const SEARCH_RECO: { fn: string; recommended: string; alternatives: string; free: string; links: SearchProviderKey[] }[] = [
-  { fn: "Busca web", recommended: "Busca A", alternatives: "Busca B, Busca C", free: "Cotas gratuitas em todas as opções", links: ["search-primary", "search-alt", "reader"] },
-  { fn: "Pesquisa profunda", recommended: "Busca C (profunda)", alternatives: "Busca A (research)", free: "Cota generosa numa · a outra é mais completa (~5 min)", links: ["reader", "search-primary"] },
-  { fn: "Conteúdo social", recommended: "Busca D", alternatives: "—", free: "Trial disponível", links: ["scraper"] },
+  { fn: "Busca web", recommended: "Tavily", alternatives: "Brave, Jina", free: "Tavily 1.000/mês · Brave 2.000/mês", links: ["tavily", "brave", "jina"] },
+  { fn: "Pesquisa profunda", recommended: "Jina DeepSearch", alternatives: "Tavily Research", free: "Jina: cota generosa · Tavily: mais completo (~5 min)", links: ["jina", "tavily"] },
+  { fn: "Conteúdo social", recommended: "ScrapeCreators", alternatives: "—", free: "Trial disponível", links: ["scrapecreators"] },
 ];
 
 const emptyLines: SearchLines = {
@@ -300,7 +388,7 @@ function SearchSection() {
         intro="Use a sua própria chave de busca (opcional). Vazio = usa a chave do Reachyn."
         steps={[
           "Em cada função (Busca web / Pesquisa profunda / Conteúdo social), escolha o provedor PRINCIPAL e uma RESERVA.",
-          "Crie a conta no provedor de busca da sua escolha e gere a API Key. Cada opção (Busca A/B/C/D) corresponde a um provedor compatível.",
+          "Crie a conta e gere a API Key no provedor: Tavily (tavily.com) · Brave (brave.com/search/api) · ScrapeCreators (scrapecreators.com) · Jina (jina.ai).",
           "Cole a chave no campo do provedor e clique em \"Testar\" (mostra ✓ e a latência).",
           "Clique em Salvar. Se a principal falhar, o Reachyn usa a reserva automaticamente.",
         ]}
@@ -353,7 +441,7 @@ function SearchSection() {
             <strong style={{ fontSize: ".95rem" }}>{fn.label}</strong>
             <p className="txt" style={{ color: "var(--muted)", fontSize: ".82rem", margin: "4px 0 12px" }}>{fn.desc}</p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 12 }}>
               {/* Linha principal */}
               <div>
                 <label style={lbl} title="Provedor que o Reachyn tenta primeiro.">Principal <span style={{ opacity: .7 }}>(tentado primeiro)</span></label>
@@ -393,57 +481,56 @@ function SearchSection() {
 // ── Central de Geração ───────────────────────────────────────────────────────
 // Mesmo padrão da Pesquisa: cada FUNÇÃO (texto/imagem/vídeo/voz) tem uma linha
 // PRINCIPAL e uma de RESERVA (fallback). A CHAVE é por PROVEDOR (gen-keys); se um
-// provedor aparece em duas linhas, a chave é a mesma. Os 3 modelos de vídeo
-// (video-a/video-b/video-c) são MODELOS que rodam pela MESMA chave do provedor de mídia.
-// As keys abaixo são o CONTRATO DE FIO com o engine (gen_lines) — NÃO renomear; só os
-// rótulos exibidos são genéricos (white-label).
+// provedor aparece em duas linhas, a chave é a mesma. A escolha de motor de VÍDEO por
+// modelo não mora mais aqui (é no catálogo, gen_models) — aqui fica só o provedor de
+// clipe com chave própria.
 
 type GenFnKey = "text" | "image" | "video" | "voice";
 type GenLines = Record<GenFnKey, LinePair>;
 
+// Slot de chave (gen-keys) que atende os modelos de VÍDEO no engine. É um IDENTIFICADOR
+// DE API (campo de `genkeys.Set` / `GenerationKeys::PROVIDERS`), não um rótulo — o nome
+// exibido vem do back-end, em `providers[].label`.
+//
+// ⚠️ 2026-08-04: era "kie". O agregador saiu em 03/08 e este slot continuou pedindo a chave
+// dele nesta tela — campo de credencial para um motor que nenhum caminho chama. A escolha de
+// motor de vídeo mudou de lugar (é por MODELO no catálogo); aqui sobra o Hailuo direto.
+const VIDEO_KEY_SLOT = "minimax";
+
 // Provedor da CHAVE (gen-keys) usada por cada opção de geração.
-// Imagem primária roda pela chave de texto; imagem alternativa e vídeo pela chave de mídia.
+// Todos os modelos de vídeo compartilham a MESMA chave.
 const GEN_KEY_OF: Record<string, string> = {
-  text: "text",
-  "text-alt": "text_alt",
-  image: "text",
-  "image-alt": "media",
-  "video-a": "media",
-  "video-b": "media",
-  "video-c": "media",
-  voice: "voice",
+  minimax: "minimax",
+  ollama: "ollama",
+  elevenlabs: "elevenlabs",
 };
 
-// Rótulos genéricos das OPÇÕES de geração (white-label: sem nome de marca).
+// Rótulos amigáveis das OPÇÕES de geração (provedor ou modelo) por função.
 const GEN_OPTION_LABEL: Record<string, string> = {
-  text: "Texto/Imagem (primário)",
-  "text-alt": "Texto (alternativo)",
-  "image-alt": "Imagem (alternativo)",
-  "video-a": "Vídeo A (recomendado)",
-  "video-b": "Vídeo B",
-  "video-c": "Vídeo C",
-  voice: "Voz",
+  minimax: "a IA",
+  ollama: "Ollama",
+  elevenlabs: "voz",
 };
 
-// Rótulo da opção dentro de uma função (image/primário tem texto próprio).
+// Rótulo da opção dentro de uma função (image/minimax precisa de texto próprio).
 function genOptionLabel(fn: GenFnKey, opt: string): string {
-  if (fn === "image" && opt === "image") return "Imagem (primário)";
+  if (fn === "image" && opt === "minimax") return "a IA (image-01)";
   return GEN_OPTION_LABEL[opt] || opt;
 }
 
 const GEN_FUNCTIONS: { key: GenFnKey; label: string; desc: string }[] = [
   { key: "text", label: "Texto / IA", desc: "Gera roteiros, legendas e textos. Permite Base URL e Modelo próprios." },
   { key: "image", label: "Imagem", desc: "Gera imagens para posts, thumbnails e capas." },
-  { key: "video", label: "Vídeo", desc: "Gera vídeos. Os modelos rodam pela chave do provedor de vídeo." },
+  { key: "video", label: "Vídeo", desc: "Gera vídeos. Todos os modelos rodam por uma única chave de vídeo." },
   { key: "voice", label: "Voz", desc: "Narração e voz sintética para os vídeos." },
 ];
 
-// Tabela de recomendação (didática, sem nome de marca).
+// Tabela de recomendação (didática).
 const GEN_RECO: { fn: string; recommended: string; alternatives: string; obs: string }[] = [
-  { fn: "Texto / IA", recommended: "Texto/Imagem (primário)", alternatives: "Texto (alternativo)", obs: "Base URL + Modelo configuráveis." },
-  { fn: "Imagem", recommended: "Imagem (primário)", alternatives: "Imagem (alternativo)", obs: "—" },
-  { fn: "Vídeo", recommended: "Vídeo A", alternatives: "Vídeo B, Vídeo C", obs: "Todos usam a chave do provedor de vídeo. Vídeo premium é toggle no Studio." },
-  { fn: "Voz", recommended: "Voz", alternatives: "—", obs: "—" },
+  { fn: "Texto / IA", recommended: "a IA", alternatives: "Ollama", obs: "Base URL + Modelo configuráveis." },
+  { fn: "Imagem", recommended: "a IA (image-01)", alternatives: "—", obs: "—" },
+  { fn: "Vídeo", recommended: "Hailuo 02", alternatives: "Hailuo 2.3 Fast (econômico), Seedance, Kling", obs: "Todos usam a mesma chave de vídeo. Premium vídeo premium é toggle no Studio." },
+  { fn: "Voz", recommended: "voz", alternatives: "—", obs: "—" },
 ];
 
 const emptyGenLines: GenLines = {
@@ -464,7 +551,7 @@ function GenerationSection() {
   const [lines, setLines] = useState<GenLines>(emptyGenLines);
   const [recommended, setRecommended] = useState<Partial<GenLines>>({});
   const [byFunction, setByFunction] = useState<Record<GenFnKey, string[]>>({ text: [], image: [], video: [], voice: [] });
-  // chaves (gen-keys), por PROVEDOR de chave (slugs de fio do engine: texto/texto-alt/vídeo/voz)
+  // chaves (gen-keys), por PROVEDOR de chave (texto, vídeo, voz…)
   const [providers, setProviders] = useState<Provider[]>([]);
   const [configured, setConfigured] = useState<Record<string, boolean>>({});
   const [vals, setVals] = useState<Record<string, string>>({});
@@ -489,10 +576,10 @@ function GenerationSection() {
       if (d.recommended) setRecommended(d.recommended);
       const pbf = d.providers_by_function || {};
       setByFunction({
-        text: pbf.text || ["text", "text-alt"],
-        image: pbf.image || ["image", "image-alt"],
-        video: pbf.video || ["video-a", "video-b", "video-c"],
-        voice: pbf.voice || ["voice"],
+        text: pbf.text || ["minimax", "ollama"],
+        image: pbf.image || ["minimax"],
+        video: pbf.video || ["minimax"],
+        voice: pbf.voice || ["elevenlabs"],
       });
     }).catch(() => {});
     // 2) chaves (gen-keys) — configured + settings(base_url/model)
@@ -530,7 +617,7 @@ function GenerationSection() {
   }
 
   // Provedores de CHAVE realmente em uso nesta função (principal + reserva, dedup, sem vazio).
-  // Mapeia a OPÇÃO escolhida (ex.: "video-a") para o provedor da CHAVE (ex.: "media").
+  // Mapeia a OPÇÃO escolhida para o provedor da CHAVE (opção sem mapa = ela própria).
   function keyProvidersInUse(fn: GenFnKey): string[] {
     const out: string[] = [];
     for (const opt of [lines[fn].primary, lines[fn].fallback]) {
@@ -587,8 +674,8 @@ function GenerationSection() {
   }
 
   // Campo de chave de UM provedor de CHAVE (gen-keys), reaproveitado entre linhas/funções.
-  // `viaMedia` = quando o provedor da chave é mídia mas a função é vídeo (deixa claro na UI).
-  function KeyField({ keyProv, viaMedia }: { keyProv: string; viaMedia?: boolean }) {
+  // `chaveDeVideo` = quando esta é a chave compartilhada dos modelos de vídeo (deixa claro na UI).
+  function KeyField({ keyProv, chaveDeVideo }: { keyProv: string; chaveDeVideo?: boolean }) {
     const t = test[keyProv];
     const prov = provById(keyProv);
     const testable = prov?.testable !== false; // por padrão testável
@@ -596,7 +683,7 @@ function GenerationSection() {
       <div style={{ marginTop: 10, padding: 10, background: "var(--bg2)", border: "1px solid var(--line)", borderRadius: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <strong style={{ fontSize: ".85rem" }}>
-            {keyProvLabel(keyProv)}{viaMedia && <span style={{ color: "var(--muted)", fontWeight: 400 }}> · o vídeo usa a chave do provedor de mídia</span>}
+            {keyProvLabel(keyProv)}{chaveDeVideo && <span style={{ color: "var(--muted)", fontWeight: 400 }}> · todos os modelos de vídeo rodam por esta chave</span>}
           </strong>
           <span style={configured[keyProv] ? badgeOn : badgeOff}>{configured[keyProv] ? "🔑 sua chave ✓" : "usando a do Reachyn"}</span>
         </div>
@@ -649,7 +736,7 @@ function GenerationSection() {
         intro="Use a sua própria chave de IA (opcional). Vazio = usa a chave do Reachyn."
         steps={[
           "Em cada função (Texto / Imagem / Vídeo / Voz), escolha o provedor/modelo PRINCIPAL e uma RESERVA.",
-          "Gere a API Key na conta de cada provedor compatível e cole no campo da função. Os modelos de vídeo (A/B/C) usam a mesma chave do provedor de vídeo.",
+          "Gere a API Key no site do provedor: a IA (platform.minimax.io) · Google/premium (aistudio.google.com) · voz (elevenlabs.io). Os modelos de vídeo (Hailuo/Seedance/Kling) compartilham uma única chave de vídeo.",
           "No Texto, opcionalmente preencha Base URL + Modelo pra usar qualquer LLM compatível com OpenAI.",
           "Cole a chave, clique em \"Testar\" e Salvar. Se o principal falhar, o Reachyn usa a reserva.",
         ]}
@@ -693,7 +780,7 @@ function GenerationSection() {
               <strong style={{ fontSize: ".95rem" }}>{fn.label}</strong>
               <p className="txt" style={{ color: "var(--muted)", fontSize: ".82rem", margin: "4px 0 12px" }}>{fn.desc}</p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 12 }}>
                 {/* Linha principal */}
                 <div>
                   <label style={lbl} title="Provedor/modelo tentado primeiro.">Principal <span style={{ opacity: .7 }}>(tentado primeiro)</span></label>
@@ -714,7 +801,7 @@ function GenerationSection() {
 
               {/* Chaves por PROVEDOR de chave usado nesta função (sem duplicar) */}
               {keyProvidersInUse(fn.key).length > 0 ? (
-                keyProvidersInUse(fn.key).map((kp) => <KeyField key={kp} keyProv={kp} viaMedia={fn.key === "video" && kp === "media"} />)
+                keyProvidersInUse(fn.key).map((kp) => <KeyField key={kp} keyProv={kp} chaveDeVideo={fn.key === "video" && kp === VIDEO_KEY_SLOT} />)
               ) : (
                 <p className="txt" style={{ color: "var(--muted)", fontSize: ".78rem", marginTop: 10 }}>Escolha um provedor/modelo acima para conectar sua chave (opcional).</p>
               )}
@@ -748,21 +835,22 @@ export default function ChavesApiPage() {
     <>
       <h1 className="h1">Chaves API</h1>
       <p className="sub">Todas as chaves dos provedores que o Reachyn usa, organizadas por função. Cifradas em repouso; provedor sem chave aqui usa a padrão do sistema.</p>
+      <SaldosSection />
       <SearchSection />
       <GenerationSection />
       <AdminSection
         base="/api/admin/publish-keys"
         title="Publicação"
-        subtitle="A publicação nas redes (Instagram, Facebook, LinkedIn, YouTube, X, Threads…) é feita pelo Zernio — o motor de publicação social do Reachyn. Uma conta Zernio do operador cobre todos os clientes; cada cliente conecta as próprias redes por login (OAuth), sem precisar de chave."
+        subtitle="A publicação nas redes (Instagram, Facebook, LinkedIn, YouTube, X, Threads…) é feita pelo conector social — o motor de publicação social do Reachyn. Uma conta conector social do operador cobre todos os clientes; cada cliente conecta as próprias redes por login (OAuth), sem precisar de chave."
         guide={{
-          intro: "Para ligar a publicação, conecte a chave da sua conta Zernio (o Reachyn cuida do resto):",
+          intro: "Para ligar a publicação, conecte a chave da sua conta conector social (o Reachyn cuida do resto):",
           steps: [
-            "Crie uma conta no Zernio (zernio.com).",
-            "No painel do Zernio, gere uma API Key.",
-            "Cole a API Key no campo Zernio abaixo e clique em \"Testar conexão\".",
+            "Crie uma conta no conector social (o painel do conector).",
+            "No painel do conector social, gere uma API Key.",
+            "Cole a API Key no campo conector social abaixo e clique em \"Testar conexão\".",
             "Pronto: na aba Conexões, cada cliente conecta as próprias redes por OAuth (login), sem ver a chave.",
           ],
-          note: "O Zernio não tem programa de indicação — use o site oficial (zernio.com) para criar a conta. A chave fica cifrada e vale para todos os clientes do operador.",
+          note: "O conector social não tem programa de indicação — use o site oficial (o painel do conector) para criar a conta. A chave fica cifrada e vale para todos os clientes do operador.",
         }}
       />
     </>

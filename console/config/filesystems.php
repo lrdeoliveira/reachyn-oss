@@ -60,7 +60,7 @@ return [
             'report' => false,
         ],
 
-        // Sistema de mídia Reachyn → object storage S3 (host via env). Mesmo storage do ffmpeg-service.
+        // Sistema de mídia Reachyn → Scality (s3.example.com). Mesmo storage do ffmpeg-service.
         'media' => [
             'driver' => 's3',
             // S3_* (nome novo) com fallback p/ MINIO_* durante a transição do .env.
@@ -69,7 +69,7 @@ return [
             'region' => 'us-east-1',
             'bucket' => env('MEDIA_S3_BUCKET', 'public'),
             'endpoint' => env('MEDIA_S3_ENDPOINT'),
-            // leitura pública = base + bucket (<media-base>/public/...)
+            // leitura pública = base + bucket (s3.example.com/public/...)
             'url' => rtrim((string) env('MEDIA_S3_PUBLIC_BASE'), '/').'/'.env('MEDIA_S3_BUCKET', 'public'),
             'use_path_style_endpoint' => true,
             'visibility' => 'public',

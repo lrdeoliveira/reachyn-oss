@@ -42,10 +42,10 @@ class GenerationKeyController extends Controller
         foreach (GenerationKeys::PROVIDERS as $p) {
             $key = trim((string) $r->input($p['key'], ''));
 
-            // base_url/model só são aceitos pra providers configuráveis (ex.: <provider>_base_url).
+            // base_url/model só são aceitos pra providers configuráveis (ex.: minimax_base_url).
             $settings = [];
             foreach (GenerationKeys::configurableFields($p['key']) as $f) {
-                $field = $p['key'].'_'.$f; // ex.: <provider>_base_url, <provider>_model
+                $field = $p['key'].'_'.$f; // ex.: minimax_base_url, ollama_model
                 if ($r->has($field)) {
                     $settings[$f] = trim((string) $r->input($field, ''));
                 }

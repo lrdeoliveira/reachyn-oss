@@ -18,7 +18,16 @@
         </include>
     </source>
     <php>
+        <!-- A suíte inteira derrubava o processo com "Premature end of PHP process" no
+             memory_limit padrão (128M) — e o teste apontado passava sozinho, o que mandava
+             procurar bug onde não havia. São 317 testes num processo só, cada um com
+             RefreshDatabase; a memória acumula. Fixar aqui vale mais que no CI: o mesmo comando
+             passa na máquina de quem desenvolve e no runner. -->
+        <ini name="memory_limit" value="1G"/>
         <env name="APP_ENV" value="testing"/>
+        <!-- Chave FIXA só do ambiente de teste (não protege nada real): sem ela todo Feature
+             test morre em "No application encryption key has been specified". -->
+        <env name="APP_KEY" value="base64:HV2jXtJh8vyD+kle6Dh4eU8anF4MmoCeizpL8Ngl3rE="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

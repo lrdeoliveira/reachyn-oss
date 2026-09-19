@@ -32,7 +32,7 @@ class PublishKeyController extends Controller
             return $pk->api_key;
         }
 
-        return $provider === 'zernio' ? (string) (config('services.zernio.key') ?: env('ZERNIO_API_KEY', '')) : '';
+        return $provider === 'zernio' ? (string) config('services.zernio.key') : '';
     }
 
     public function index(Request $r): JsonResponse

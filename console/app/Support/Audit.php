@@ -38,7 +38,7 @@ class Audit
             unset($context[$blocked]);
         }
 
-        static::channel()->info("[AUDIT] {$action}", array_merge($base, $context));
+        self::channel()->info("[AUDIT] {$action}", array_merge($base, $context));
     }
 
     private static function channel()

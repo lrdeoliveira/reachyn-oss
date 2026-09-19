@@ -1,0 +1,75 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    # ── POR QUE NÍVEL 3 ─────────────────────────────────────────────────────────
+    # O objetivo desta trava é a classe de bug que passou meses invisível em prod:
+    # `EngineClient::paraGeracao()` sendo CHAMADO sem existir (3 jobs quebrados em
+    # runtime). Essa checagem é `method.notFound`, ativa a partir do nível 2 —
+    # o nível 3 (tipos de retorno/propriedade) ainda vem quase de graça e pega
+    # também `property.notFound`, `arguments.count` e `offsetAccess.notFound`.
+    #
+    # Medição real deste repo ao instalar (antes das correções):
+    #   nível 0=16 · 1=36 · 2=171 · 3=212 · 4=839 · 5=966 · 6=1360 · 7=1462 · 8=1570
+    #
+    # O nível 4 QUADRUPLICA (212→839) e o que entra ali é quase todo ruído de
+    # "always true/false" sobre helpers do Laravel — travaria o repo sem pegar
+    # nenhum bug novo da classe que interessa. Preferimos nível 3 SEM baseline
+    # (zero erros, tudo corrigido de verdade) a um nível alto com 800 exceções.
+    # Subir pra 4+ é possível no futuro, mas exige trabalho de tipagem, não config.
+    level: 3
+
+    paths:
+        - app
+        - routes
+        - database
+        - tests
+
+    # Larastan varre as migrations pra descobrir colunas/tipos de cada model.
+    # ⚠️ Só entende corpo de CLOSURE: `Schema::table('x', fn (Blueprint $t) => ...)`
+    # deixa a coluna INVISÍVEL (caso real: shots.ancora_url). Use closure.
+    databaseMigrationsPath:
+        - database/migrations
+
+    ignoreErrors:
+        # ── Limitações do analisador com magic methods do framework ────────────
+        # NÃO adicionar nada aqui que envolva método/propriedade do NOSSO código:
+        # é exatamente o que essa ferramenta existe pra pegar.
+
+        # Cashier\Checkout expõe url/id/etc. via __get (vendor/laravel/cashier/src/Checkout.php:175).
+        -
+            identifier: property.notFound
+            message: '#Access to an undefined property Laravel\\Cashier\\Checkout::#'
+            path: routes/api.php
+
+        # laravel/mcp declara schema(): array<string, JsonSchema> mas os tipos concretos
+        # que a própria fluent API devolve (StringType, IntegerType…) não implementam esse
+        # contrato. Bug de tipagem do pacote, não nosso — o runtime funciona.
+        -
+            identifier: return.type
+            message: '#should return array<string, Illuminate\\Contracts\\JsonSchema\\JsonSchema> but returns#'
+            path: app/Mcp/Tools/*.php
+
+        # Filament declara getPasswordFormComponent(): Component (tipo largo), mas devolve
+        # um TextInput, que TEM rule() (vendor/filament/forms/.../CanBeValidated.php:477).
+        -
+            identifier: method.notFound
+            message: '#Call to an undefined method Filament\\Schemas\\Components\\Component::rule\(\)#'
+            path: app/Filament/App/Pages/Auth/Register.php
+
+        # Larastan resolve o cast `encrypted:array` como string; em runtime o Eloquent
+        # devolve array (a anotação @property no model não vence o cast inferido).
+        -
+            message: '#app_authentication_recovery_codes#'
+            path: app/Models/User.php
+        -
+            identifier: return.type
+            message: '#getAppAuthenticationRecoveryCodes\(\) should return array<string>\|null but returns string\|null#'
+            path: app/Models/User.php
+
+        # Migration de bootstrap do ROLE do banco: roda no deploy, antes de existir
+        # qualquer config cacheada, e não há chave de config equivalente pra senha.
+        # Falha barulhenta (throw) se a env faltar — não silencia.
+        -
+            identifier: larastan.noEnvCallsOutsideOfConfig
+            path: database/migrations/2026_06_18_010000_ensure_reachyn_app_role.php

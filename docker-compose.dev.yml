@@ -1,34 +1,67 @@
 # reachyn-mono — DEV LOCAL (Docker Desktop), com HOT-RELOAD.
-# Recorte do stack: só o app (postgres + console + engine + web).
+# Stack COMPLETO: postgres + migrate + console + worker + engine + web + scality (S3) +
+# ffmpeg-service + bgutil-pot. Mídia (gerar imagem/vídeo, montar) FUNCIONA local.
 # Código montado por bind mount → editar local reflete no container sem rebuild.
-# Produção (VPS) usa o docker-compose.yml completo (Scality/Windmill/Traefik).
+# Produção (VPS) usa o docker-compose.yml completo (+ Windmill/Traefik/gallery/landing).
 # Subir:  docker compose -f docker-compose.dev.yml up -d --build
-name: reachyn-dev
+#
+# RLS (RBK-001): igual a produção — o `migrate` roda como SUPERUSER (DDL) e console/worker
+# rodam como `reachyn_app` (NOSUPERUSER/NOBYPASSRLS), então o RLS multi-tenant VALE em dev.
+# Antes, migrate+serve dividiam o mesmo comando/usuário → runtime superuser → RLS inerte.
+name: reachyn
 
 networks:
   reachyn-dev:
 
 volumes:
   pg-data-dev:
+  scality-data-dev:
+  scality-meta-dev:
 
 services:
   postgres:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-reachyn}
       POSTGRES_USER: ${POSTGRES_USER:-reachyn}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reachyn-dev}   # AUD-029: senha só de DEV (nunca usar em prod)
     volumes:
-      - pg-data-dev:/var/lib/postgresql/data
+      - pg-data-dev:/var/lib/postgresql          # pg18+: mount na raiz, não em /data
     # AUD-029: bind só em loopback (127.0.0.1) — não expor o postgres dev em 0.0.0.0 (LAN/internet).
     ports: ["127.0.0.1:5433:5432"]   # 5433 p/ não conflitar com pg local
+    # Sem isto, `depends_on` só espera o container INICIAR e o console migrava antes do banco
+    # aceitar conexão → SQLSTATE[08006] Connection refused.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-reachyn} -d ${POSTGRES_DB:-reachyn}"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks: [reachyn-dev]
+
+  migrate:                         # one-shot: migrations como SUPERUSER (precisam de DDL).
+    build: ./console               # Equivale ao scripts/migrate-prod.sh em produção.
+    command: php artisan migrate --force
+    env_file: .env
+    environment:                   # sobrepõe o runtime (reachyn_app, sem DDL) do .env
+      DB_USERNAME: ${POSTGRES_USER:-reachyn}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-reachyn-dev}
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+    volumes:
+      - ./console:/app
+      - /app/vendor
+      - /app/bootstrap/cache
     networks: [reachyn-dev]
 
   console:                         # Laravel/Filament — hot-reload (php artisan serve relê a cada request)
     build: ./console
-    command: sh -c "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
+    command: php artisan serve --host=0.0.0.0 --port=8000   # migrate saiu daqui → ver serviço `migrate`
     env_file: .env
-    depends_on: [postgres]
+    depends_on:
+      postgres: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
     ports: ["127.0.0.1:8210:8000"]   # AUD-029: dev só em loopback
     volumes:
       - ./console:/app
@@ -36,11 +69,22 @@ services:
       - /app/bootstrap/cache       # idem cache de pacotes (sem dev-deps como Pail)
     networks: [reachyn-dev]
 
-  worker:                          # fila Laravel (dublagem e jobs assíncronos de mídia)
+  worker:                          # fila Laravel (dublagem ElevenLabs e jobs assíncronos)
     build: ./console
-    command: php artisan queue:work --tries=1 --timeout=1300
+    # ⚠️ As DUAS filas aqui. Prod separa 'animation' em pool próprio (head-of-line: o desenho
+    # despacha N cenas de 8-14min e empurrava o resto pra trás); dev é single-user, não precisa
+    # isolar — mas precisa CONSUMIR as duas, senão o Estúdio de Animação simplesmente não roda
+    # localmente e nada avisa (o job fica em jobs.queue='animation' sem ninguém pra pegar).
+    command: php artisan queue:work --queue=animation,default --tries=1 --timeout=1300
     env_file: .env
-    depends_on: [postgres]
+    # A imagem do console traz um healthcheck HTTP (GET :8000/up); o worker roda queue:work e não
+    # sobe HTTP nenhum → ficava "unhealthy" pra sempre com o worker 100% ok. Em prod não acontece:
+    # lá o worker é imagem própria (reachyn-worker). Aqui reusa ./console → herda e precisa desligar.
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
     volumes:
       - ./console:/app
       - /app/vendor
@@ -50,7 +94,8 @@ services:
   engine:                          # Go — sem ports (interno, console alcança via engine:8080)
     build: ./engine
     env_file: .env
-    depends_on: [postgres]
+    depends_on:
+      postgres: {condition: service_healthy}
     networks: [reachyn-dev]
 
   web:                             # Next.js — next dev (hot-reload) na 3000, exposto em 3210
@@ -59,9 +104,109 @@ services:
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_CONSOLE_URL: http://localhost:8210
+      # Origem que o BROWSER usa pra buscar mídia. Alimenta a CSP (img/media/connect-src) e o
+      # isOwnMedia do front; sem isto o front assume o storage de PROD e ignora a mídia local.
+      NEXT_PUBLIC_MEDIA_BASE: ${MEDIA_S3_PUBLIC_BASE:-http://localhost:8333}
+      MEDIA_S3_PUBLIC_BASE: ${MEDIA_S3_PUBLIC_BASE:-http://localhost:8333}   # server-side (/api/compose)
     depends_on: [console, engine]
     ports: ["127.0.0.1:3210:3000"]   # AUD-029: dev só em loopback
+    # A imagem traz um healthcheck de PROD que bate na 3210; o `next dev` serve na 3000 →
+    # ficava eternamente "unhealthy" com o app 100% ok. Aqui apontamos pra porta real do dev.
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     volumes:
       - ./web:/app
       - /app/node_modules          # preserva node_modules da imagem (alpine), não o do host
+      # .next do CONTAINER, não o do host. Um `npm run build` no Mac deixa um .next de PRODUÇÃO
+      # (BUILD_ID, prerender-manifest) que o bind mount injetava aqui; o `next dev` por cima dele
+      # fazia o Turbopack entrar em pânico ("Next.js package not found") a cada HMR → o browser
+      # caía em RELOAD INFINITO. Isolar = dev regenera limpo e o build do host fica intocado.
+      - /app/.next
+    networks: [reachyn-dev]
+
+  scality:                         # Zenko CloudServer (S3-compatível) — storage da mídia, igual prod
+    image: zenko/cloudserver@sha256:b53e57829cf7df357323e60a19c9f98d2218f1b7ccb1d7cea5761a5a227a9ee3
+    environment:
+      S3BACKEND: file
+      REMOTE_MANAGEMENT_DISABLE: "1"
+      # `localhost` aqui é obrigatório: o BROWSER busca a mídia por http://localhost:8333 e o
+      # CloudServer valida o Host da requisição contra esta lista.
+      ENDPOINT: "scality-s3,localhost,127.0.0.1"
+      SCALITY_ACCESS_KEY_ID: ${S3_KEY:?defina S3_KEY}
+      SCALITY_SECRET_ACCESS_KEY: ${S3_SECRET:?defina S3_SECRET}
+    volumes:
+      - scality-data-dev:/usr/src/app/localData      # objetos (dev, isolado do volume de prod)
+      - scality-meta-dev:/usr/src/app/localMetadata  # metadados
+    ports: ["127.0.0.1:8333:8000"]   # AUD-029: loopback. É a URL pública da mídia em dev.
+    networks:
+      reachyn-dev:
+        aliases: [scality-s3]      # engine/console/ffmpeg resolvem http://scality-s3:8000 (= prod)
+
+  scality-init:                    # one-shot: cria o bucket `public`. Um Scality NOVO sobe VAZIO —
+    build: ./media/ffmpeg-service  # sem isto toda mídia falha com NoSuchBucket em ambiente do zero.
+    restart: "no"                  # (reusa a imagem do ffmpeg-service, que já traz boto3)
+    depends_on: [scality]
+    environment:
+      S3_ENDPOINT: http://scality-s3:8000
+      S3_KEY: ${S3_KEY:?defina S3_KEY}
+      S3_SECRET: ${S3_SECRET:?defina S3_SECRET}
+      S3_BUCKET: ${MEDIA_S3_BUCKET:-public}
+    entrypoint: ["python3", "-c"]
+    command:
+      - |
+        import boto3, os, sys, time
+        from botocore.exceptions import ClientError
+        b = os.environ.get('S3_BUCKET', 'public')
+        s3 = boto3.client('s3', endpoint_url=os.environ['S3_ENDPOINT'],
+                          aws_access_key_id=os.environ['S3_KEY'],
+                          aws_secret_access_key=os.environ['S3_SECRET'])
+        for i in range(30):                      # scality não tem healthcheck; espera subir
+            try:
+                s3.list_buckets(); break
+            except Exception:
+                time.sleep(2)
+        else:
+            print('scality não respondeu', file=sys.stderr); sys.exit(1)
+        try:
+            s3.create_bucket(Bucket=b); print(f'bucket {b} criado')
+        except ClientError as e:
+            if e.response['Error']['Code'] in ('BucketAlreadyOwnedByYou', 'BucketAlreadyExists'):
+                print(f'bucket {b} já existe')
+            else:
+                raise
+    networks: [reachyn-dev]
+
+  ffmpeg-service:                  # montagem/mux de vídeo + download YouTube
+    build: ./media/ffmpeg-service
+    depends_on:
+      bgutil-pot: {condition: service_started}
+      scality: {condition: service_started}
+      scality-init: {condition: service_completed_successfully}
+    environment:
+      S3_ENDPOINT: http://scality-s3:8000
+      S3_KEY: ${S3_KEY:?defina S3_KEY}
+      S3_SECRET: ${S3_SECRET:?defina S3_SECRET}
+      S3_BUCKET: ${MEDIA_S3_BUCKET:-public}
+      S3_PUBLIC_BASE: ${MEDIA_S3_PUBLIC_BASE:-http://localhost:8333}/public
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      BGUTIL_POT_BASE_URL: http://bgutil-pot:4416
+      FFMPEG_SERVICE_TOKEN: ${FFMPEG_SERVICE_TOKEN:?defina FFMPEG_SERVICE_TOKEN}
+      # 🎞️ Legenda animada (dev): token default fraco SÓ aqui (rede interna local)
+      CAPTION_URL: http://caption-service:3979
+      CAPTION_TOKEN: ${CAPTION_SERVICE_TOKEN:-dev-caption-token}
+    networks: [reachyn-dev]
+
+  caption-service:                 # legenda ANIMADA (Remotion → WebM VP8+alpha; overlay no ffmpeg-service)
+    build: ./media/caption-service
+    environment:
+      CAPTION_SERVICE_TOKEN: ${CAPTION_SERVICE_TOKEN:-dev-caption-token}
+      CAPTION_RENDER_CONCURRENCY: "2"
+    networks: [reachyn-dev]
+
+  bgutil-pot:                      # PO token do YouTube (sidecar do ffmpeg-service)
+    image: brainicism/bgutil-ytdlp-pot-provider:1.1.0
     networks: [reachyn-dev]

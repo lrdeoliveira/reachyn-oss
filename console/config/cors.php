@@ -1,7 +1,7 @@
 <?php
 
 return [
-    // Em produção web e console são a MESMA origem (app.example.com) → CORS nem dispara.
+    // Em produção web e console são a MESMA origem (app.reachyn.agency) → CORS nem dispara.
     // Em dev (web :3000 → console :8000) liberamos a origem do front com credenciais.
     'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'logout'],
 

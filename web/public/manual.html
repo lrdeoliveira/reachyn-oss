@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual do Reachyn</title>
+<style>
+  :root{
+    --paper:#FBF7F3; --ink:#211915; --card:#ffffff; --line:#ece3db;
+    --muted:#6d6157; --soft:#8a7d72;
+    --brand:#D93A32; --brand-2:#E27A2E; --brand-ink:#7a241f;
+    --ok:#2f8f5b; --lock:#a99383;
+    --shadow:0 1px 2px rgba(33,25,21,.05), 0 8px 24px -12px rgba(33,25,21,.18);
+    --maxw:1180px;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#16100d; --ink:#f4ece5; --card:#1f1713; --line:#33261f;
+      --muted:#a5988c; --soft:#8a7d71;
+      --brand:#F0574D; --brand-2:#EE9247; --brand-ink:#ffd9cf;
+      --ok:#54c98a; --lock:#b79a86;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#FBF7F3; --ink:#211915; --card:#ffffff; --line:#ece3db;
+    --muted:#6d6157; --soft:#8a7d72; --brand:#D93A32; --brand-2:#E27A2E; --brand-ink:#7a241f;
+    --ok:#2f8f5b; --lock:#a99383; --shadow:0 1px 2px rgba(33,25,21,.05), 0 8px 24px -12px rgba(33,25,21,.18);
+  }
+  :root[data-theme="dark"]{
+    --paper:#16100d; --ink:#f4ece5; --card:#1f1713; --line:#33261f;
+    --muted:#a5988c; --soft:#8a7d71; --brand:#F0574D; --brand-2:#EE9247; --brand-ink:#ffd9cf;
+    --ok:#54c98a; --lock:#b79a86; --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -14px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px;}
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- header ---------- */
+  header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--paper) 88%, transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+  .top .wrap{display:flex;align-items:center;gap:14px;height:60px;}
+  .logo{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.02em;font-size:1.08rem}
+  .logo .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--brand),var(--brand-2));
+    display:grid;place-items:center;color:#fff;font-weight:900;font-size:1rem;box-shadow:var(--shadow)}
+  .top .sp{flex:1}
+  .top nav{display:flex;gap:4px}
+  .top nav a{color:var(--muted);font-size:.82rem;padding:6px 10px;border-radius:8px}
+  .top nav a:hover{color:var(--ink);background:color-mix(in srgb,var(--brand) 9%,transparent);text-decoration:none}
+  .themeBtn{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:8px;
+    width:34px;height:34px;cursor:pointer;font-size:.95rem;display:grid;place-items:center}
+  .themeBtn:hover{color:var(--ink)}
+  @media(max-width:820px){.top nav{display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{padding:54px 0 30px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--brand);font-weight:600}
+  .hero h1{font-size:clamp(2.1rem,5vw,3.3rem);line-height:1.03;letter-spacing:-.03em;margin:.35em 0 .3em;
+    text-wrap:balance;font-weight:800}
+  .hero p.lead{font-size:1.14rem;color:var(--muted);max-width:60ch;margin:0}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:24px}
+  .legend .lg{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;color:var(--muted);
+    border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px}
+  .legend .dot{width:9px;height:9px;border-radius:50%}
+
+  /* ---------- layout ---------- */
+  .shell{display:grid;grid-template-columns:232px 1fr;gap:38px;align-items:start;padding-bottom:80px}
+  @media(max-width:900px){.shell{grid-template-columns:1fr;gap:20px}}
+  aside.toc{position:sticky;top:76px;align-self:start;font-size:.9rem}
+  @media(max-width:900px){aside.toc{position:static;border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--card)}}
+  .toc .grp{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);
+    margin:16px 0 6px;font-weight:600}
+  .toc a{display:block;color:var(--muted);padding:4px 10px;border-radius:7px;border-left:2px solid transparent}
+  .toc a:hover{color:var(--ink);background:color-mix(in srgb,var(--brand) 7%,transparent);text-decoration:none}
+
+  main{min-width:0}
+
+  /* ---------- sections ---------- */
+  section.feat{scroll-margin-top:74px;padding:26px 0;border-top:1px solid var(--line)}
+  section.feat:first-of-type{border-top:0;padding-top:6px}
+  .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--brand-2);font-weight:600}
+  h2{font-size:1.75rem;letter-spacing:-.02em;margin:.15em 0 .1em;font-weight:800;text-wrap:balance}
+  h2 .em{font-size:1.3rem;margin-right:.35em}
+  h3{font-size:1.06rem;margin:1.6em 0 .5em;letter-spacing:-.01em;font-weight:700}
+  .what{color:var(--muted);max-width:66ch;margin:.5em 0 0}
+  p{max-width:68ch}
+
+  /* steps */
+  ol.steps{counter-reset:s;list-style:none;padding:0;margin:1em 0;display:flex;flex-direction:column;gap:9px}
+  ol.steps li{counter-increment:s;position:relative;padding-left:38px;color:var(--ink)}
+  ol.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:25px;height:25px;border-radius:8px;
+    background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand);font-family:var(--mono);
+    font-size:.82rem;font-weight:700;display:grid;place-items:center}
+
+  /* control list */
+  .ctrls{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card);margin:1em 0}
+  .ctrl{display:grid;grid-template-columns:190px 1fr;gap:16px;padding:12px 16px;border-top:1px solid var(--line)}
+  .ctrl:first-child{border-top:0}
+  @media(max-width:640px){.ctrl{grid-template-columns:1fr;gap:4px}}
+  .ctrl .k{font-family:var(--mono);font-size:.82rem;color:var(--ink);font-weight:600;line-height:1.5}
+  .ctrl .d{color:var(--muted);font-size:.93rem}
+  .ctrl .d b{color:var(--ink);font-weight:600}
+  .opt{font-family:var(--mono);font-size:.76rem;background:color-mix(in srgb,var(--brand) 8%,transparent);
+    color:var(--brand-ink);padding:1px 7px;border-radius:6px;white-space:nowrap}
+
+  /* callouts */
+  .note{border-radius:12px;padding:13px 16px;margin:1.1em 0;font-size:.95rem;display:flex;gap:11px;align-items:flex-start}
+  .note .ic{flex:none;font-size:1.05rem;line-height:1.4}
+  .note.why{background:color-mix(in srgb,var(--brand-2) 12%,transparent);border:1px solid color-mix(in srgb,var(--brand-2) 30%,transparent)}
+  .note.tip{background:color-mix(in srgb,var(--ok) 11%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent)}
+  .note.warn{background:color-mix(in srgb,var(--brand) 10%,transparent);border:1px solid color-mix(in srgb,var(--brand) 26%,transparent)}
+  .note b{font-weight:700}
+  .note .lbl{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;display:block;margin-bottom:1px}
+  .note.why .lbl{color:var(--brand-2)} .note.tip .lbl{color:var(--ok)} .note.warn .lbl{color:var(--brand)}
+
+  /* flow diagram */
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:1.2em 0;font-family:var(--mono);font-size:.82rem}
+  .flow .st{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 13px;font-weight:600;box-shadow:var(--shadow)}
+  .flow .ar{color:var(--brand-2);font-weight:700}
+
+  /* mini screen mock */
+  .screen{border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:var(--shadow);margin:1.1em 0;overflow:hidden}
+  .screen .bar{display:flex;align-items:center;gap:7px;padding:9px 14px;border-bottom:1px solid var(--line);
+    background:color-mix(in srgb,var(--brand) 4%,transparent)}
+  .screen .bar .b{width:9px;height:9px;border-radius:50%;background:var(--line)}
+  .screen .bar .ttl{font-family:var(--mono);font-size:.76rem;color:var(--muted);margin-left:6px}
+  .screen .body{padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px}
+  .pill{font-family:var(--mono);font-size:.76rem;border:1px solid var(--line);border-radius:8px;padding:6px 11px;color:var(--muted);background:var(--paper)}
+  .pill.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+  .pill.act{background:color-mix(in srgb,var(--brand) 14%,transparent);border-color:color-mix(in srgb,var(--brand) 34%,transparent);color:var(--brand-ink);font-weight:600}
+  .pill.lock{opacity:.55}
+
+  .cost{font-family:var(--mono);font-size:.74rem;color:var(--brand-2);border:1px solid color-mix(in srgb,var(--brand-2) 34%,transparent);border-radius:6px;padding:1px 7px;white-space:nowrap}
+
+  footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--soft);font-size:.86rem;text-align:center}
+  footer .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(150deg,var(--brand),var(--brand-2));display:inline-grid;place-items:center;color:#fff;font-weight:900;vertical-align:middle;margin-right:6px}
+  h2 .num{font-family:var(--mono);font-size:1rem;color:var(--soft);margin-right:.5em;font-weight:600}
+  .grpttl{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);
+    font-weight:700;margin:44px 0 -6px;padding-top:20px;border-top:2px solid color-mix(in srgb,var(--brand) 20%,transparent)}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+  @media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="wrap">
+    <span class="logo"><span class="mark">R</span> Reachyn · Manual</span>
+    <span class="sp"></span>
+    <nav>
+      <a href="#fluxo">Fluxo</a><a href="#video">Vídeo</a><a href="#historias">Histórias</a><a href="#midia">Mídia</a>
+      <a href="#publicar">Publicar</a><a href="#prompts">Prompts</a>
+    </nav>
+    <button class="themeBtn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema claro/escuro">◐</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <span class="eyebrow">Guia de uso · da ideia à publicação</span>
+    <h1>Manual do Reachyn</h1>
+    <p class="lead">O estúdio de conteúdo com IA da sua marca: pesquise um tema, gere texto, imagem e vídeo,
+      monte histórias e filmes, e publique em todas as redes — num fluxo só. Este manual explica
+      <b>o que cada tela faz</b>, <b>como usar</b> e <b>por que</b> cada controle existe.</p>
+    <div class="legend">
+      <span class="lg"><span class="dot" style="background:var(--brand)"></span> Como usar (passo a passo)</span>
+      <span class="lg"><span class="dot" style="background:var(--brand-2)"></span> Por quê (a razão da coisa)</span>
+      <span class="lg"><span class="dot" style="background:var(--ok)"></span> Dica</span>
+      <span class="lg"><span class="cost">créd</span> custo em créditos</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap shell">
+  <!-- ============ TOC ============ -->
+  <aside class="toc" aria-label="Índice">
+    <div class="grp">Começe aqui</div>
+    <a href="#fluxo">Como o Reachyn funciona</a>
+    <div class="grp">Conteúdo</div>
+    <a href="#pesquisar">Pesquisar</a>
+    <a href="#resumo">Resumo</a>
+    <a href="#conteudo">Conteúdo / Legendas</a>
+    <div class="grp">Estúdio</div>
+    <a href="#rapido">Rápido</a>
+    <a href="#ideias">Ideias</a>
+    <a href="#calendario">Calendário</a>
+    <a href="#midia">Mídia</a>
+    <a href="#video">Vídeo</a>
+    <a href="#historias">Histórias</a>
+    <a href="#quadrinhos">Quadrinhos</a>
+    <a href="#movies">Movies</a>
+    <a href="#aventuras">Aventuras</a>
+    <a href="#animacao">Animação</a>
+    <a href="#personagens">Personagens</a>
+    <div class="grp">Publicar</div>
+    <a href="#otimizar">Otimizar</a>
+    <a href="#reaproveitar">Reaproveitar</a>
+    <a href="#subir">Novo post (subir mídia)</a>
+    <a href="#aprovar">Aprovar</a>
+    <a href="#publicar">Publicar</a>
+    <a href="#publicacoes">Publicações</a>
+    <a href="#conexoes">Conexões</a>
+    <div class="grp">Biblioteca</div>
+    <a href="#galeria">Galeria</a>
+    <a href="#prompts">Prompts</a>
+    <a href="#catalogo">Catálogo criativo</a>
+    <div class="grp">Conta</div>
+    <a href="#plano">Plano &amp; Uso</a>
+    <a href="#creditos">Créditos &amp; custos</a>
+  </aside>
+
+  <main>
+    <!-- ============ FLUXO ============ -->
+    <section class="feat" id="fluxo">
+      <span class="kicker">Visão geral</span>
+      <h2>Como o Reachyn funciona</h2>
+      <p class="what">O Reachyn tem <b>dois caminhos</b> que terminam no mesmo lugar (a publicação), e uma
+        <b>biblioteca</b> que abastece os dois. O menu à esquerda do app está agrupado exatamente assim.</p>
+
+      <h3>1. O fluxo do post (rápido)</h3>
+      <div class="flow">
+        <span class="st">Pesquisar</span><span class="ar">→</span>
+        <span class="st">Conteúdo / Legendas</span><span class="ar">→</span>
+        <span class="st">Mídia</span><span class="ar">→</span>
+        <span class="st">Aprovar</span><span class="ar">→</span>
+        <span class="st">Publicar</span>
+      </div>
+      <p>Pesquisa um tema, a IA escreve o texto por rede, você gera as imagens/vídeos, revisa e publica.</p>
+
+      <h3>2. Os módulos criativos (peças maiores)</h3>
+      <div class="flow">
+        <span class="st">🎬 Histórias</span><span class="ar">·</span>
+        <span class="st">🎞️ Movies</span><span class="ar">·</span>
+        <span class="st">👤 Personagens</span>
+      </div>
+      <p><b>Histórias</b> monta um vídeo em cenas (roteiro + imagem + narração + montagem). <b>Movies</b> cria um
+        filme/comercial completo num fluxo guiado de 6 etapas. <b>Personagens</b> cria um personagem-base
+        consistente pra reusar em tudo. O resultado de qualquer um deles cai na <b>Mídia</b> e segue pro
+        Aprovar → Publicar.</p>
+
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica</span>
+        Todo trabalho gira em torno de um <b>rascunho</b> (um tema). O título do rascunho aparece no topo de
+        cada tela — é o mesmo assunto seguindo do Pesquisar até o Publicar. <b>“+ Novo”</b> começa outro.</div></div>
+
+      <h3>🦊 Primeiros passos</h3>
+      <p>Na primeira vez, a home mostra um <b>checklist de 4 passos</b> (conectar rede → gerar mídia →
+        criar no Estúdio → aprovar e publicar) que marca sozinho conforme você avança — cada item leva
+        direto à tela certa. No <b>Estúdio de Animação</b>, os botões <b>⚡ Começar com um modelo</b>
+        pré-preenchem tema, estilo e nº de cenas com receitas prontas (história infantil, quadrinho de
+        piada, explicador de produto…) — é só trocar o tema pelo seu e seguir.</p>
+
+      <h3>⚙️ Central de tarefas</h3>
+      <p>Gerações demoradas (vídeo, GIF, música, model sheet, desenho automático) entram na
+        <b>Central de tarefas</b> — o botão <b>⚙️ Tarefas</b> no menu à esquerda. Você pode <b>navegar à
+        vontade</b> (ou até dar F5): o acompanhamento continua, o contador mostra o que está rodando e,
+        quando uma geração termina, aparece um <b>aviso no canto da tela</b> com o botão <b>Ver</b> levando
+        direto ao resultado. Itens concluídos ficam na lista por 24h (ou até você limpar).</p>
+    </section>
+
+    <!-- ============ CONTEÚDO GROUP ============ -->
+    <div class="grpttl">Conteúdo</div>
+
+    <section class="feat" id="pesquisar">
+      <span class="kicker">Conteúdo</span>
+      <h2><span class="em">🔎</span>Pesquisar</h2>
+      <p class="what">Levanta material factual sobre um tema pra a IA escrever com base real (não “chutar”).</p>
+      <ol class="steps">
+        <li>Escreva o <b>tema/ideia</b> no campo.</li>
+        <li>Escolha <b>onde pesquisar</b> (Web, Instagram, X/Twitter, YouTube).</li>
+        <li>Clique <b>Pesquisar</b> — o resumo da IA + as fontes aparecem abaixo (e viram a base do texto).</li>
+      </ol>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Pesquisar em</span><span class="d">Fonte da pesquisa: <span class="opt">Web</span> <span class="opt">Instagram</span> <span class="opt">Twitter</span> <span class="opt">YouTube</span>.</span></div>
+        <div class="ctrl"><span class="k">Pesquisar →</span><span class="d">Roda a pesquisa normal + resumo.</span></div>
+        <div class="ctrl"><span class="k">Pesquisa profunda</span><span class="d">Investigação mais funda (recurso do plano Studio). Mais completa, mais lenta.</span></div>
+        <div class="ctrl"><span class="k">Criar sem pesquisa</span><span class="d">Pula a pesquisa e abre o editor na hora — quando você já sabe o que quer dizer.</span></div>
+      </div>
+      <div class="note why"><span class="ic">🎯</span><div><span class="lbl">Por quê</span>
+        Texto bom nasce de base boa. A pesquisa dá à IA fatos, ângulos e vocabulário do tema — o texto sai
+        específico em vez de genérico.</div></div>
+    </section>
+
+    <section class="feat" id="resumo">
+      <span class="kicker">Conteúdo</span>
+      <h2><span class="em">📄</span>Resumo</h2>
+      <p class="what">O <b>resumo/referência</b> que a IA usa como base pra gerar o texto dos posts e os prompts
+        de mídia. É editável — refine aqui e tudo que for gerado depois herda esse contexto.</p>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica</span>
+        Ajuste o resumo antes de gerar texto/mídia: um resumo mais afiado = posts e imagens mais no ponto.</div></div>
+    </section>
+
+    <section class="feat" id="conteudo">
+      <span class="kicker">Conteúdo</span>
+      <h2><span class="em">📝</span>Conteúdo / Legendas</h2>
+      <p class="what">Onde a IA escreve — e você ajusta — o <b>texto do post por rede</b>. Cada rede tem sua aba,
+        com o tamanho e o tom certos pra ela.</p>
+      <div class="screen"><div class="bar"><span class="b"></span><span class="ttl">Selecione as redes</span></div>
+        <div class="body">
+          <span class="pill act">LinkedIn</span><span class="pill act">Instagram</span><span class="pill act">Facebook</span>
+          <span class="pill act">TikTok</span><span class="pill act">YouTube</span><span class="pill act">X / Twitter</span>
+          <span class="pill lock">🔒 Threads</span><span class="pill lock">🔒 Pinterest</span><span class="pill act">Reddit</span>
+          <span class="pill lock">🔒 Bluesky</span><span class="pill lock">🔒 Google Business</span>
+        </div></div>
+      <ol class="steps">
+        <li>Marque as <b>redes</b> que vão receber o post (🔒 = rede sem conta conectada — veja <a href="#conexoes">Conexões</a>).</li>
+        <li>Gere/edite o <b>texto por rede</b> — dá pra escolher o idioma <span class="opt">PT</span>/<span class="opt">EN</span> por rede.</li>
+        <li>Confira a <b>mídia anexada</b> (vinda da Mídia). Use <b>Salvar rascunho</b> pra não perder.</li>
+        <li>Siga com <b>Ir pra Mídia</b> (gerar imagem/vídeo) ou <b>Revisar e aprovar</b>.</li>
+      </ol>
+      <div class="note why"><span class="ic">🎯</span><div><span class="lbl">Por quê</span>
+        Cada rede fala uma língua: o que funciona no LinkedIn não funciona no TikTok. Texto por rede evita o
+        “copia-e-cola” que performa mal.</div></div>
+    </section>
+
+    <!-- ============ ESTÚDIO GROUP ============ -->
+    <div class="grpttl">Estúdio</div>
+
+    <section class="feat" id="ideias">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">💡</span>Ideias</h2>
+      <p class="what">O <b>topo do funil</b>: acaba com o <em>“não sei o que postar”</em>. Você informa o
+        <b>nicho do seu canal</b> e a IA devolve um banco de ideias de vídeo viral — cada uma com título
+        chamativo, gatilho, formato e uma <b>nota de potencial</b>. Um clique leva a ideia direto pro
+        roteiro do Estúdio, já pré-preenchido.</p>
+
+      <h3>Gerador de ideias</h3>
+      <p>Escreva o nicho (ex: <i>“curiosidades de história antiga”</i>, <i>“finanças pra jovens”</i>) e
+        escolha o <b>ângulo</b>:</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Equilibrado</span><span class="d">um banco variado, do fácil ao difícil — pra começar hoje.</span></div>
+        <div class="ctrl"><span class="k">Por dor da audiência</span><span class="d">cada ideia resolve uma dor real do seu público (as de maior clique).</span></div>
+        <div class="ctrl"><span class="k">Sazonal</span><span class="d">datas comemorativas, estações e eventos do mês que você escolher.</span></div>
+        <div class="ctrl"><span class="k">Destravar</span><span class="d">formatos e ângulos novos que você provavelmente ainda não tentou.</span></div>
+        <div class="ctrl"><span class="k">Ideia maluca</span><span class="d">ousadas e quebra-padrão — mas ainda viáveis pro seu nicho.</span></div>
+      </div>
+      <p>Cada ideia vira um card com o <b>formato viral</b>, a <b>dificuldade</b> e a <b>nota (🔥 1-10)</b>.
+        Clique em <b>Gerar esse vídeo</b> e você cai no <b>Estúdio de Animação</b> com o roteiro-semente
+        pronto — é só ajustar o tema e seguir.</p>
+
+      <h3>Formatos virais</h3>
+      <p>A biblioteca dos <b>formatos consagrados</b> de vídeo faceless (Antes e Depois, Top N, “O que
+        acontece se…”, Comparação, Tutorial rápido, Mistério, Polêmica…). Cada um traz a <b>estrutura</b>
+        (gancho → clímax → CTA), o <b>gatilho</b> e a <b>duração ideal</b>. <b>Usar este formato</b>
+        pré-preenche o Estúdio com um roteiro naquele formato — troque pelo seu tema.</p>
+
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica</span>
+        Gerar ideias custa <b>1 crédito de texto</b> (o mesmo de um roteiro) — barato de rodar quantas vezes
+        quiser. As ideias não ficam salvas: escolha uma e leve pro Estúdio antes de sair da tela.</div></div>
+    </section>
+
+    <section class="feat" id="calendario">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">🗓️</span>Calendário</h2>
+      <p class="what"><b>Recorrência sem esforço</b> — o que faz a audiência voltar todo dia. A partir
+        do seu nicho, monta um <b>plano de 30 dias</b> pronto ou uma <b>série</b> que fideliza.</p>
+
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Calendário de 30 dias</span><span class="d">um mês de posts com <b>título + formato + prioridade</b> por dia, e <b>dias de descanso</b> pra você não se esgotar.</span></div>
+        <div class="ctrl"><span class="k">Série de episódios</span><span class="d">N episódios com <b>dificuldade crescente</b> e uma estratégia de <b>teaser</b> — cada um puxa o próximo.</span></div>
+      </div>
+      <p>Cada dia ou episódio traz um botão <b>Gerar</b> que leva direto ao <b>Estúdio de Animação</b>
+        com o roteiro-semente pronto (mesmo atalho da aba <b>Ideias</b>). Custa <b>1 crédito de texto</b>
+        por plano gerado.</p>
+    </section>
+
+    <section class="feat" id="rapido">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">⚡</span>Rápido</h2>
+      <p class="what">A porta de entrada pra quem não sabe por onde começar: escolha um <b>modelo pronto</b>
+        (Quick Start) e o Reachyn já monta o projeto pra você, ou dê um <b>trato rápido numa imagem</b>
+        (EasyApps) — tudo em um clique, sem sair do app.</p>
+
+      <h3>Templates</h3>
+      <p>Uma galeria de modelos por objetivo (Reels narrado, desenho com diálogo, UGC de produto,
+        carrossel, quadrinhos, faceless “Top N”, antes/depois, storyboard 1-clique). Cada card mostra
+        o que gera, o <span class="cost">custo estimado</span> <b>antes</b> de aplicar e sugestões de ajuste.
+        <b>Aplicar é grátis</b> — a geração só cobra na hora, como sempre.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Filtrar por categoria</span><span class="d">Reels, História, Quadrinhos, Produto/UGC, Faceless…</span></div>
+        <div class="ctrl"><span class="k">Personagem (opcional)</span><span class="d">Amarra um personagem da sua biblioteca — a identidade trava depois do roteiro.</span></div>
+        <div class="ctrl"><span class="k">Usar este modelo</span><span class="d">Modelos de vídeo abrem o <a href="#animacao">Estúdio</a> pré-preenchido; de conteúdo, abrem um rascunho no <a href="#conteudo">Conteúdo</a>.</span></div>
+      </div>
+
+      <h3>Ajustes (EasyApps)</h3>
+      <p>Suba uma imagem e aplique um ajuste de 1 clique. O resultado vira uma <b>nova imagem</b> no rascunho.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">✨ Melhorar</span><span class="d">Aumenta a nitidez/resolução.</span></div>
+        <div class="ctrl"><span class="k">✂️ Remover fundo</span><span class="d">Deixa o sujeito sobre fundo liso.</span></div>
+        <div class="ctrl"><span class="k">💡 Reiluminar</span><span class="d">Troca só a luz (ex.: golden hour, neon) mantendo o sujeito.</span></div>
+        <div class="ctrl"><span class="k">🖼️ Novo fundo (produto)</span><span class="d">Troca só o fundo do produto, mantendo o produto igual.</span></div>
+        <div class="ctrl"><span class="k">🌆 Trocar fundo</span><span class="d">Troca só o fundo de qualquer cena, sujeito intacto.</span></div>
+        <div class="ctrl"><span class="k">👗 Trocar roupa</span><span class="d">Troca só a roupa — exige um <a href="#personagens">personagem</a> da sua biblioteca (identidade travada).</span></div>
+        <div class="ctrl"><span class="k">🙂 Detalhar rosto</span><span class="d">Refina o rosto que já está na imagem (não troca a pessoa).</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Também na Mídia</span>
+        Reiluminar e Novo fundo aparecem direto em cada imagem da <a href="#midia">Mídia</a>/<a href="#galeria">Galeria</a>,
+        ao lado de Melhorar e Remover fundo.</div></div>
+
+      <h3>Meus Assets</h3>
+      <p>Um acervo da sua marca pra <b>reusar mídia que você gostou</b> em outro projeto. Salve com o botão
+        <b>⭐ Salvar nos Assets</b> (na Mídia ou no resultado de um Ajuste), depois <b>favorite</b>, filtre por tipo
+        e <b>copie a URL</b> pra usar em “partir de uma imagem”. Sem custo.</p>
+      <div class="note tip"><span class="ic">⭐</span><div><span class="lbl">Receitas da equipe</span>
+        Gostou de um resultado? No <a href="#conteudo">Conteúdo</a>, o botão <b>⭐ Receita</b> salva aquele
+        rascunho como um modelo da sua marca — ele passa a aparecer aqui no Rápido como <b>“da sua equipe”</b>,
+        pronto pra aplicar de novo.</div></div>
+    </section>
+
+    <!-- ============ MÍDIA (deep) ============ -->
+    <section class="feat" id="midia">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">🖼️</span>Mídia</h2>
+      <p class="what">A oficina visual: gera <b>imagem</b>, <b>GIF</b>, <b>logo</b> e <b>vídeo</b> pro post — por IA
+        ou a partir de uma imagem sua. Tudo que sai aqui entra na galeria do rascunho.</p>
+
+      <h3>Bloco “Imagem”</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Para quais redes</span><span class="d">Destina a próxima mídia a redes específicas. Sem marcar nenhuma, ela serve <b>todas</b>.</span></div>
+        <div class="ctrl"><span class="k">Formato</span><span class="d">Proporção da imagem: <span class="opt">1:1</span> <span class="opt">9:16</span> <span class="opt">16:9</span> <span class="opt">4:5</span>.</span></div>
+        <div class="ctrl"><span class="k">Estilo</span><span class="d">Look visual: realista/foto, 3D, cartoon, aquarela, etc.</span></div>
+        <div class="ctrl"><span class="k">Modelo · Qualidade</span><span class="d">O motor de geração e a resolução — o <span class="cost">custo em créditos</span> muda conforme a escolha.</span></div>
+        <div class="ctrl"><span class="k">Preset do logo</span><span class="d">Estilo do logotipo quando você usa <b>Gerar logo</b> (minimalista, etc.).</span></div>
+        <div class="ctrl"><span class="k">Prompt (opcional)</span><span class="d">Descrição livre da imagem. Vazio = a IA usa o tema/resumo do rascunho.</span></div>
+        <div class="ctrl"><span class="k">Gerar imagem / GIF / logo</span><span class="d">Cria a mídia. <b>Upload imagem/vídeo</b> sobe um arquivo pronto; <b>Atualizar/Limpar</b> gerenciam a galeria.</span></div>
+      </div>
+
+      <h3>“Partir de uma imagem” (i2i, opcional)</h3>
+      <p>Envie ou escolha uma imagem da galeria pra a IA <b>transformar</b>, <b>animar</b> ou usar como <b>base</b>
+        do vídeo. Sem imagem, a geração é por texto (o prompt acima).</p>
+
+      <h3>Bloco “Gerar vídeo”</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Prompt do vídeo</span><span class="d">Descrição do movimento/cena. Opcional.</span></div>
+        <div class="ctrl"><span class="k">Formato · Cenas</span><span class="d">Proporção e nº de cenas do vídeo sincronizado (<span class="opt">1–60</span>).</span></div>
+        <div class="ctrl"><span class="k">Duração de cada clipe</span><span class="d"><span class="opt">5s</span> ou <span class="opt">10s</span> por cena.</span></div>
+        <div class="ctrl"><span class="k">Estilo · Grade · Grain</span><span class="d">Estilo de movimento, o tratamento de cor (grade) e granulado de filme (grain).</span></div>
+        <div class="ctrl"><span class="k">Modelo · Qualidade</span><span class="d">Motor e resolução do vídeo — mudam o <span class="cost">custo</span>.</span></div>
+        <div class="ctrl"><span class="k">Opções</span><span class="d"><b>Narração</b> (voz), <b>Legenda</b> (na tela), <b>Música</b> e <b>Qualidade</b> extra.</span></div>
+      </div>
+
+      <div class="note tip"><span class="ic">🎨</span><div><span class="lbl">Vestir com a marca</span>
+        Em cada imagem gerada, o botão <b>“🎨 Vestir com a marca”</b> compõe título, logo e CTA sobre ela, no
+        formato de cada rede (feed, story, carrossel) — usando o seu <a href="#prompts">Brand Kit</a>. Vira um
+        post pronto, não só uma imagem crua.</div></div>
+      <div class="note tip"><span class="ic">✨</span><div><span class="lbl">Pós-processamento (EasyApps)</span>
+        Em cada imagem, os ajustes de 1 clique: <b>Melhorar</b> (upscale, mais nitidez),
+        <b>Remover fundo</b> (PNG transparente), <b>Reiluminar</b> (troca só a luz) e
+        <b>Novo fundo</b> (troca só o fundo do produto). Também na aba <a href="#rapido">Rápido</a>,
+        onde dá pra subir uma imagem avulsa e escolher o clima da luz / o novo fundo.</div></div>
+    </section>
+
+    <!-- ============ HISTÓRIAS (deep) ============ -->
+    <section class="feat" id="video">
+      <span class="kicker">Estúdio · aba única de vídeo</span>
+      <h2><span class="em">🎬</span>Vídeo</h2>
+      <p class="what">A aba <b>única</b> de vídeo do estúdio: você escreve o conteúdo, a IA monta um
+        <b>storyboard</b> cena a cena pra você revisar de graça, e só então a peça é gerada — inteira ou uma
+        cena por vez. A antiga aba <b>Vox</b> foi absorvida aqui em <b>2026-08-06</b>: o <b>layout dela</b>
+        (storyboard em cartões) virou o layout da aba, e o Vox virou uma <b>opção do campo Estilo</b>, com toda
+        a doutrina do formato intacta. O endereço antigo <span class="opt">/vox</span> continua funcionando —
+        ele redireciona pra cá.</p>
+
+      <h3>Estilo — o campo que decide a peça</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">📰 Vox — colagem de papel</span><span class="d">O formato de <b>jornalismo explicativo</b>: uma voz conduz o raciocínio do começo ao fim e cada frase ganha a <b>sua própria ilustração</b>, em colagem de papel recortado, no instante em que é dita. Tem <b>motor próprio</b>, segmentação própria e a tipografia animada da assinatura — por isso não mostra seletor de motor nem de duração (a cena é de 6s, por doutrina).</span></div>
+        <div class="ctrl"><span class="k">Os demais estilos</span><span class="d">Cinematográfico, Dinâmico, Documental, Câmera lenta, Aéreo, Timelapse, Noir, Vintage, Cyberpunk, Anime, 3D animado, Vlog — ou <b>Sem estilo</b>. Aqui o caminho é o de vídeo comum: aparecem <b>Motor</b> (com o custo por cena), <b>Resolução</b>, <b>Duração da cena</b> (5 ou 10s), <b>Direção</b> (as personas que você escreveu na aba Prompts), <b>Cor</b> (paleta cinematográfica), <b>Personagem</b> (com identity lock) e <b>Imagem base</b> opcional.</span></div>
+      </div>
+
+      <div class="note tip"><span class="ic">✨</span><div><span class="lbl">Escreva o roteiro antes de gerar</span>
+        Escrever o roteiro custa <b>uma chamada de texto</b>; gerar a peça custa <b>uma imagem e um clipe por
+        capítulo</b>. Por isso o botão <b>“📝 Gerar Storyboard”</b> vem primeiro: leia, corrija o que quiser
+        e só então mande gerar. Roteiro torto descoberto no vídeo pronto é a peça inteira perdida.</div></div>
+
+      <h3>O que faz o formato funcionar</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">A narração manda</span><span class="d">Não existe apresentador na tela: existe uma voz conduzindo um argumento. O conjunto das frases tem de se ler como <b>um texto só</b>.</span></div>
+        <div class="ctrl"><span class="k">A imagem obedece à frase</span><span class="d">Quando a voz diz “as prateleiras esvaziaram”, a tela mostra prateleiras vazias — não “um supermercado”. É sincronia, não ilustração decorativa.</span></div>
+        <div class="ctrl"><span class="k">O visual é gráfico</span><span class="d">Colagem de papel recortado, paleta fechada, poucos elementos por quadro. O papel se move; a câmera fica parada. Câmera à deriva é o que denuncia vídeo de IA.</span></div>
+      </div>
+
+      <h3>Os controles</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Conteúdo</span><span class="d">O assunto — uma frase concreta (<span class="opt">“por que a conta de luz subiu por causa dos data centers”</span>) ou um roteiro seu, colado inteiro, que a peça deve seguir.</span></div>
+        <div class="ctrl"><span class="k">Beats</span><span class="d">Quantos capítulos o raciocínio tem (2 a 12). Cada capítulo é uma frase falada + ilustrações + um clipe — então é aqui que o <b>custo</b> é decidido. 4 capítulos ≈ 25s; 6 ≈ 40s; 10 ≈ 65s.</span></div>
+        <div class="ctrl"><span class="k">Formato · Idioma</span><span class="d">9:16 vertical (Reels, Shorts, TikTok) ou 16:9 horizontal (YouTube); roteiro e narração em português ou inglês.</span></div>
+        <div class="ctrl"><span class="k">Narração · Legenda · Música</span><span class="d">Os três nascem ligados — são a doutrina do formato. Dá pra desligar cada um; sem legenda a peça perde a <b>tipografia Vox</b> (a palavra carimbando na tela), que é parte da assinatura.</span></div>
+        <div class="ctrl"><span class="k">📝 Roteiro · 🎨 Estilo · 🎥 Direção</span><span class="d">Seções <b>opcionais</b> com presets e texto livre: regras extras de estrutura (ex.: <span class="opt">Comercial 15s</span>), direção de arte extra (ex.: <span class="opt">Paper diorama sépia</span>) e movimento extra (ex.: <span class="opt">Documentário observacional</span>). O extra entra <b>por cima</b> do padrão, nunca no lugar dele — vazio = o padrão do estilo. A seção <b>🎥 Direção</b> só aparece no estilo Vox: é o campo de movimento do formato e não existe fora dele.</span></div>
+        <div class="ctrl"><span class="k">📝 Gerar Storyboard</span><span class="d">Escreve só o roteiro e mostra os capítulos pra você revisar e <b>editar</b> (frase falada, título e as duas ilustrações de cada capítulo). <b>Não gera imagem nem vídeo</b> e não consome cota de mídia. Pode pedir outro quantas vezes quiser.</span></div>
+        <div class="ctrl"><span class="k">🎬 Gerar Filme Completo</span><span class="d">Gera a peça sobre <b>exatamente</b> os capítulos que você aprovou. Sem passar pela revisão, o roteiro é escrito na hora.</span></div>
+        <div class="ctrl"><span class="k">🎬 Gerar cena / ↻ Regerar cena</span><span class="d">Cada capítulo do storyboard tem o seu botão: gera (ou refaz) <b>só aquela cena</b> — uma imagem + um clipe — e mostra o resultado num player ali mesmo. Cena torta deixou de custar a peça inteira. Editar a frase ou a ilustração invalida o clipe daquele capítulo (ele foi gerado do texto antigo).</span></div>
+        <div class="ctrl"><span class="k">🎬 Montar filme (N/N cenas prontas)</span><span class="d">Concatena as cenas prontas, na ordem do storyboard, num filme só — com trilha opcional (toggle 🎵). Este caminho não tem narração nem tipografia Vox: pra peça completa com voz e legenda, use “Gerar Filme Completo”.</span></div>
+        <div class="ctrl"><span class="k">🕒 Roteiro com timestamps</span><span class="d">Cada capítulo mostra o seu intervalo no filme (<span class="opt">00:06–00:12</span> — 6s por cena no Vox, 5 ou 10s nos demais estilos), e o bloco copiável entrega o roteiro completo em dois formatos: <span class="opt">[início–fim] frase</span> (pra sincronizar edição externa) e <b>Capítulos (YouTube)</b> (<span class="opt">00:00 Título</span> — cole na descrição do vídeo).</span></div>
+        <div class="ctrl"><span class="k">✍️ Texto de publicação</span><span class="d">No fim da aba: escolha as redes conectadas e gere a <b>legenda de cada uma</b> a partir do tema + roteiro (mesmo redator da aba Conteúdo). Editável e regenerável por rede (↻); os textos ficam no rascunho e a publicação segue pela aba <a href="#publicar">Publicar</a>.</span></div>
+      </div>
+
+      <h3>Montar filme (clipes prontos) — agora com voz e legenda</h3>
+      <p class="what">Já tem os clipes gerados em outro lugar (Google Flow, por exemplo)? A seção
+        <b>🎬 Montar filme</b> sobe os seus MP4s, deixa arrumar a ordem — <b>arrastando</b> os itens ou pelos
+        botões ↑/↓ — e monta a <b>peça completa</b>: até <b>2026-08-06</b> ela só concatenava, e o clipe cru
+        não tinha como virar vídeo publicável.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Fala por cena</span><span class="d">Cada clipe da fila ganha um campo de texto: o que o narrador diz <b>enquanto aquele clipe roda</b>. O contador de caracteres é calculado pela <b>duração real do arquivo</b> (mostrada ao lado do nome), não por um valor fixo.</span></div>
+        <div class="ctrl"><span class="k">📋 Colar roteiro inteiro</span><span class="d">Atalho pra quem já exportou o texto: cole <b>uma linha por cena</b> (TXT) ou o <b>SRT</b> da ferramenta externa e clique em distribuir. Os tempos do SRT são ignorados de propósito — na montagem cada fala é ancorada no início da <b>sua</b> cena.</span></div>
+        <div class="ctrl"><span class="k">🎙️ Narração · 🔤 Legenda · 🎵 Trilha</span><span class="d">A voz é a <b>mesma</b> do seletor de narrador do painel de cima (a peça tem uma voz só). A legenda é word-level e só existe com narração — é o áudio que dá os tempos. A trilha entra por baixo, preservando o áudio original dos clipes.</span></div>
+        <div class="ctrl"><span class="k">A montagem NÃO estica o vídeo</span><span class="d">Fala maior que o clipe <b>vaza pra cena seguinte</b> e a última é cortada. Por isso o botão de montar fica travado enquanto alguma cena estiver estourada — e a mensagem diz <b>qual</b> cena encurtar.</span></div>
+      </div>
+
+      <h3>Revisando o roteiro</h3>
+      <p class="what">Cada capítulo aparece com a <b>frase falada</b> — que é o que vira narração e dita o ritmo — e,
+        recolhida, a <b>ilustração</b> daquele capítulo. As duas são editáveis. Corrigir uma frase é mais rápido e
+        mais barato que pedir outro roteiro inteiro e torcer pra vir melhor.</p>
+      <div class="note"><span class="ic">🔎</span><div><span class="lbl">Leia como um texto só, e olhe as pontas</span>
+        O <b>primeiro</b> capítulo precisa se sustentar sozinho: se ele abre com “a mesma coisa”, “isso” ou “por
+        isso”, está se apoiando em algo que o espectador ainda não ouviu. E o <b>último</b> precisa <b>concluir</b> —
+        terminar numa ressalva (“mas ela ainda erra…”) joga fora o argumento inteiro, porque a última frase é a que
+        fica na cabeça de quem assistiu.</div></div>
+
+      <h3>Custo e saldo</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Onde o dinheiro vai</span><span class="d">O <b>vídeo</b> é a maior parte da conta — bem mais caro que a arte. Por isso o número de capítulos importa tanto, e por isso revisar o roteiro antes compensa.</span></div>
+        <div class="ctrl"><span class="k">Aviso de saldo</span><span class="d">Se o saldo estiver baixo para o número de capítulos escolhido, aparece um aviso <b>antes</b> dos botões. A geração é recusada logo no começo, sem gastar as primeiras cenas — peça pela metade não acontece mais.</span></div>
+        <div class="ctrl"><span class="k">Sem saldo, o roteiro continua</span><span class="d">Escrever roteiro é texto, não mídia. Dá pra preparar as peças agora e gerar depois de recarregar.</span></div>
+      </div>
+
+      <h3>Onde a peça aparece</h3>
+      <p class="what">Na <b>Galeria</b>. Peça no estilo Vox entra marcada como <b>Vox</b> (não se mistura com os
+        clipes soltos). De lá segue o caminho normal: legenda por rede e publicação.</p>
+    </section>
+
+    <section class="feat" id="historias">
+      <span class="kicker">Estúdio · seção completa</span>
+      <h2><span class="em">🎬</span>Histórias</h2>
+      <p class="what">O gerador de vídeo <b>em cenas</b>: a IA escreve um roteiro com arco (começo–meio–fim),
+        você gera a imagem e o clipe de cada cena, e o Reachyn junta tudo num <b>Short</b> com narração, legenda
+        e música.</p>
+      <div class="note tip"><span class="ic">✨</span><div><span class="lbl">Agora é um FORMATO da aba única</span>
+        Histórias virou um formato do <b>🪄 Estúdio de Animação</b> (aba única no menu): escolha
+        <b>🎬 História narrada</b> no select <b>“O que você quer gerar?”</b> e siga o wizard
+        <b>Roteiro → Elementos → Storyboard → Cenas → Short</b> — tema (ou roteiro colado), personagens/cenários
+        com identidade travada, storyboard, clipes e montagem com narração de voz única, legenda, música e o
+        Estúdio de Efeitos. O link <span class="opt">/historias</span> continua funcionando (abre o formato certo).
+        A <b>tela clássica</b> segue disponível no botão <b>“🕰 usar a tela clássica”</b> (alguns recursos —
+        add/remover/mover cena, upload de referência própria, ficha de cena editável — ainda vivem só nela).
+        Rascunho antigo também pode ser trazido pro wizard pelo botão <b>📥 Importar</b>.</div></div>
+      <p class="what">Abaixo, <b>cada controle da tela clássica, de cima até o “Montar Short”</b>.</p>
+
+      <h3>Topo</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Nova história</span><span class="d">Começa uma história do zero (novo rascunho).</span></div>
+        <div class="ctrl"><span class="k">Copiar tudo</span><span class="d">Copia o roteiro inteiro (títulos + narrações + prompts) pra colar em outro lugar.</span></div>
+      </div>
+
+      <h3>Formato</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Short (9:16)</span><span class="d">Vertical — Reels, TikTok, Shorts. <b>Padrão.</b></span></div>
+        <div class="ctrl"><span class="k">Normal (16:9)</span><span class="d">Horizontal — YouTube, tela cheia.</span></div>
+      </div>
+
+      <h3>Imagem das cenas</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Estilo</span><span class="d">Look das imagens (3D/Pixar, realista, cartoon, anime, aquarela…). Vale pra todas as cenas.</span></div>
+        <div class="ctrl"><span class="k">Plano de câmera</span><span class="d">Enquadramento aplicado às cenas (close, panorâmico, contra-plongée…). Ver <a href="#prompts">o guia de câmera</a>. <span class="opt">Nenhum</span> = livre.</span></div>
+        <div class="ctrl"><span class="k">🔗 Encadear cenas</span><span class="d"><b>Continuidade visual.</b> Cada cena usa a imagem da anterior como referência — mantém cenário, luz e paleta contínuos. <b>Ligado por padrão.</b> Desligue pra permitir um corte de cenário livre.</span></div>
+        <div class="ctrl"><span class="k">Modelo · Qualidade</span><span class="d">Motor e resolução das imagens (1K/2K/4K) — mudam o <span class="cost">custo por cena</span>.</span></div>
+      </div>
+
+      <h3>Vídeo das cenas</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Modelo · Qualidade · Estilo</span><span class="d">Motor, resolução e estilo de movimento do clipe de cada cena.</span></div>
+        <div class="ctrl"><span class="k">Duração do clipe</span><span class="d"><span class="opt">5s</span> ou <span class="opt">10s</span> — a matéria-prima do movimento (a duração final segue a narração, veja o Short).</span></div>
+        <div class="ctrl"><span class="k">Melhorar antes de animar</span><span class="d">Faz upscale da imagem antes de virar clipe — vídeo mais nítido (cobra um crédito extra por cena).</span></div>
+      </div>
+
+      <h3>Linha de estimativa</h3>
+      <p>Mostra <b>nº de cenas × (imagem + vídeo)</b>, o <span class="cost">total de créditos</span> e a
+        <b>⏱️ duração estimada do vídeo</b> — recalculados ao vivo conforme você muda as opções, pra você ver o
+        custo e o tempo <b>antes</b> de gastar.</p>
+      <div class="note why"><span class="ic">🎯</span><div><span class="lbl">Por quê</span>
+        A duração real não é “cenas × 5s”: quem manda é a <b>narração</b> de cada cena (o clipe congela/apara pra
+        caber na fala). Por isso a prévia estima pela narração.</div></div>
+
+      <h3>Tema, craft e personagem</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Tema / ideia da história</span><span class="d">O assunto. Quanto mais concreto, mais específica a história.</span></div>
+        <div class="ctrl"><span class="k">🎬 Roteirista</span><span class="d">Muda <b>como o texto é escrito</b> (tom/craft: viral, educativo, drama…). Padrão = <b>Geral (mestre)</b>.</span></div>
+        <div class="ctrl"><span class="k">🎥 Diretor</span><span class="d">Muda <b>como as cenas parecem</b> (direção visual/câmera: food, luxo, produto…). Soma-se ao roteirista.</span></div>
+        <div class="ctrl"><span class="k">👤 Personagem da biblioteca</span><span class="d">Usa um <a href="#personagens">personagem</a> salvo como base — mantém o mesmo personagem em todas as cenas.</span></div>
+        <div class="ctrl"><span class="k">Ancorar em todas as cenas</span><span class="d">Aplica o lock + as imagens-base do personagem como âncora automática de todas as cenas (sem isso, a proporção/anatomia pode variar).</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica</span>
+        Escolha o <b>Roteirista</b> pelo tipo de conteúdo e o <b>Diretor</b> pela estética do vídeo — eles se
+        somam (a craft escreve, a direção filma).</div></div>
+
+      <h3>Character Lock</h3>
+      <p>O bloco que descreve o personagem — <b>repetido no início de todo prompt</b> pra garantir o mesmo
+        personagem em todas as cenas. Botões: <b>Carregar</b> / <b>Salvar nos prompts</b> / <b>Restaurar padrão</b> /
+        <b>Editar personagem</b>.</p>
+
+      <h3>Gerar a história</h3>
+      <div class="screen"><div class="bar"><span class="b"></span><span class="ttl">linha de geração</span></div>
+        <div class="body"><span class="pill on">🎬 Gerar história (8 cenas)</span><span class="pill">Nº de cenas <b style="color:var(--ink)">8</b></span>
+          <span class="pill">Idioma <b style="color:var(--brand)">PT</b> / EN</span></div></div>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Gerar história</span><span class="d">A IA escreve o roteiro completo (título + narração + prompt de imagem por cena) num arco só.</span></div>
+        <div class="ctrl"><span class="k">Nº de cenas</span><span class="d">Quantas cenas criar (<span class="opt">3–50</span>). Depois dá pra adicionar/remover livremente.</span></div>
+        <div class="ctrl"><span class="k">Idioma</span><span class="d"><span class="opt">PT</span>/<span class="opt">EN</span> — idioma da narração e das descrições (o Character Lock fica sempre em inglês).</span></div>
+        <div class="ctrl"><span class="k">Limpar mídias</span><span class="d">Apaga imagens/vídeos/áudios de todas as cenas — <b>o roteiro fica intacto</b>.</span></div>
+      </div>
+
+      <h3>Prompts da história (globais, opcionais)</h3>
+      <p>Prompts de imagem/vídeo que se aplicam a <b>todas</b> as cenas. Começam em branco — vazio = cada cena
+        usa o seu; preencher (ou carregar 📂) aplica um padrão único a todas.</p>
+
+      <h3>Cada cena (o card)</h3>
+      <p>Depois de gerar o roteiro, cada cena vira um card. Do topo do card pra baixo:</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">↑ ↓ · 🗑️</span><span class="d">Reordena a cena (subir/descer) ou remove a cena (a mídia dela sai da galeria; as referências ficam).</span></div>
+        <div class="ctrl"><span class="k">🎙️ Narração (voiceover)</span><span class="d">O texto falado da cena. Salva sozinho. <b>É ele que dita a duração do clipe</b> no Short.</span></div>
+        <div class="ctrl"><span class="k">🖼️ Prompt de imagem</span><span class="d">O que a imagem da cena mostra (o Character Lock entra automático). O prompt global, se preenchido, sobrescreve.</span></div>
+        <div class="ctrl"><span class="k">🎥 Prompt de vídeo</span><span class="d">Só o <b>movimento</b> (“ele levanta e acena”). Vazio = animação sutil automática.</span></div>
+        <div class="ctrl"><span class="k">🌍 Cenário da cena</span><span class="d">Diretiva de ambiente só desta cena (override do mundo base).</span></div>
+        <div class="ctrl"><span class="k">🧬 Referências (i2i, máx 3)</span><span class="d">Imagens de referência da cena. Por ref: <b>✏️ Editar imagem</b> (i2i in-place) e <b>Remover</b>. Adicionar por <b>🖼️ Carregar imagem</b>, <b>📁 Galeria</b> ou <b>🎭 + Personagem</b>.</span></div>
+        <div class="ctrl"><span class="k">Qualidade (override)</span><span class="d">Tier de resolução só desta cena (<span class="opt">global</span> = usa a qualidade geral).</span></div>
+        <div class="ctrl"><span class="k">🖼️ Gerar imagem / ↻ Regerar</span><span class="d">Gera a imagem da cena (usa as refs + encadeamento). Reclicar durante a geração refaz.</span></div>
+        <div class="ctrl"><span class="k">🎲 3 variações</span><span class="d">Gera 3 opções do mesmo prompt pra escolher. <b>Custa 3× o tier.</b></span></div>
+        <div class="ctrl"><span class="k">📌 Fixar</span><span class="d">Usa uma imagem da galeria como a imagem desta cena — <b>sem custo</b>.</span></div>
+        <div class="ctrl"><span class="k">🔊 Ouvir narração</span><span class="d">Prévia da voz da cena (a voz real do Short é gerada na montagem).</span></div>
+        <div class="ctrl"><span class="k">🎬 Gerar vídeo da cena</span><span class="d">Anima a imagem (i2v) na duração escolhida. Precisa ter imagem. Se “Melhorar antes de animar” estiver ligado, faz o upscale antes.</span></div>
+        <div class="ctrl"><span class="k">✏️ Editar a imagem da cena</span><span class="d">Refina a imagem gerada por i2i, sem refazer do zero (só aparece se a cena já tem imagem).</span></div>
+        <div class="ctrl"><span class="k">+ Adicionar cena</span><span class="d">Acrescenta uma cena em branco no fim (herda os prompts da última).</span></div>
+      </div>
+
+      <h3>🎬 Juntar tudo (Short)</h3>
+      <p>O rodapé que monta o vídeo final: cada cena entra como seu clipe (ou a imagem como slide) + narração +
+        legenda + música. A linha de status mostra quantas cenas já têm vídeo/imagem e a duração estimada.</p>
+
+      <h4 style="margin:1.3em 0 .3em;font-size:.95rem;color:var(--brand-2);font-family:var(--mono);letter-spacing:.04em">Narração &amp; timing</h4>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Voz da narração</span><span class="d">A voz TTS do Short (a voz REAL é gerada aqui — o 🔊 das cenas é só prévia com a mesma escolha).</span></div>
+        <div class="ctrl"><span class="k">Qualidade da narração</span><span class="d">Tier de áudio da voz (muda o <span class="cost">custo</span>).</span></div>
+        <div class="ctrl"><span class="k">Estilo da narração</span><span class="d">Entrega da voz: <span class="opt">Neutra</span> <span class="opt">Dramática</span> <span class="opt">Calma</span> <span class="opt">Energética</span> <span class="opt">Locutor</span>.</span></div>
+        <div class="ctrl"><span class="k">Atraso da narração</span><span class="d">Atrasa o início da voz (e da legenda) dentro de cada cena — o vídeo aparece primeiro. <span class="opt">0–2s</span>.</span></div>
+        <div class="ctrl"><span class="k">Ajuste da legenda</span><span class="d">Sincronia fina: adianta (−) ou atrasa (+) só a legenda vs. a voz. <span class="opt">−1 a +1s</span>.</span></div>
+      </div>
+
+      <h4 style="margin:1.3em 0 .3em;font-size:.95rem;color:var(--brand-2);font-family:var(--mono);letter-spacing:.04em">Trilha &amp; acabamento</h4>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">🎵 Música de fundo</span><span class="d">Trilha instrumental sob a narração + campo de <b>estilo</b> (“lo-fi suave, piano emocional”).</span></div>
+        <div class="ctrl"><span class="k">🎤 Narração cantada</span><span class="d">A voz <b>canta</b> o roteiro (letra = texto da cena) em vez de narrar. Experimental — desliga a música (são exclusivos).</span></div>
+        <div class="ctrl"><span class="k">🎨 Grade (cor)</span><span class="d">Acabamento de cor do vídeo: <span class="opt">Natural</span> <span class="opt">Cinema Quente</span> <span class="opt">Teal &amp; Orange</span> <span class="opt">Noir</span> <span class="opt">Vintage</span>.</span></div>
+        <div class="ctrl"><span class="k">🌾 Grain</span><span class="d">Ruído de filme sutil junto do color grade.</span></div>
+      </div>
+
+      <h4 style="margin:1.3em 0 .3em;font-size:.95rem;color:var(--brand-2);font-family:var(--mono);letter-spacing:.04em">Legenda na tela</h4>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Posição</span><span class="d"><span class="opt">Em cima</span> <span class="opt">Meio</span> <span class="opt">Embaixo</span>.</span></div>
+        <div class="ctrl"><span class="k">Fonte</span><span class="d">Padrão, Serifada, Mono, Suave, Clássica ou Universal.</span></div>
+        <div class="ctrl"><span class="k">Tamanho · Transparência</span><span class="d">Tamanho da fonte (<span class="opt">12–56</span>) e transparência do texto (<span class="opt">0–90%</span>).</span></div>
+        <div class="ctrl"><span class="k">Cor · Borda · Cor da borda</span><span class="d">Cor do texto, espessura do contorno (<span class="opt">1–10</span>) e cor do contorno.</span></div>
+        <div class="ctrl"><span class="k">Fundo (caixa)</span><span class="d">Caixa atrás do texto (liga) + cor da caixa + opacidade (<span class="opt">10–100%</span>).</span></div>
+        <div class="ctrl"><span class="k">Prévia da legenda</span><span class="d">Mostra “SUA LEGENDA” em escala real com tudo aplicado — antes de montar.</span></div>
+      </div>
+      <div class="note why"><span class="ic">🎯</span><div><span class="lbl">Por quê a legenda tem tanta opção</span>
+        Legenda ruim mata retenção: precisa ser legível sobre qualquer imagem. Contorno + caixa garantem leitura;
+        posição e tamanho evitam cobrir o rosto ou a UI da rede.</div></div>
+
+      <h4 style="margin:1.3em 0 .3em;font-size:.95rem;color:var(--brand-2);font-family:var(--mono);letter-spacing:.04em">Montar (e o que vem depois)</h4>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">🎬 Juntar e montar Short</span><span class="d">Gera o vídeo final com tudo acima. Precisa ter ao menos 1 imagem. Fica na galeria.</span></div>
+        <div class="ctrl"><span class="k">📥 Baixar áudios e vídeos (ZIP)</span><span class="d">“Montar você mesmo”: baixa imagem+narração+vídeo de cada cena + roteiro.txt pra editar no Final Cut/outro.</span></div>
+        <div class="ctrl"><span class="k">📤 Carregar vídeo pronto</span><span class="d">Sobe o vídeo montado fora (mp4/mov até 200MB) — vira o Short final, habilitando Aprovar→Publicar.</span></div>
+        <div class="ctrl"><span class="k">✍️ Gerar textos do post</span><span class="d">Gera a legenda/descrição por rede a partir do tema+roteiro. <b>Sem texto, a rede não é publicada.</b></span></div>
+        <div class="ctrl"><span class="k">✅ Aprovação — vídeo final</span><span class="d">Quando o Short existe: <b>📣 Aprovar e publicar</b> (vai pro Aprovar), 🗑️ Excluir, 📥 Baixar, 🖼️ Galeria.</span></div>
+      </div>
+      <h3>🎇 Estúdio de Efeitos</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Filtro + Intensidade</span><span class="d">12 filtros de cor estilo Instagram na montagem final (2 créd), com controle de intensidade.</span></div>
+        <div class="ctrl"><span class="k">Transição</span><span class="d">Transições entre cenas/trechos (1 créd por corte).</span></div>
+        <div class="ctrl"><span class="k">VFX por cena</span><span class="d">Tremida, glitch, VHS, zoom pulsante, congelar (2 créd/cena).</span></div>
+        <div class="ctrl"><span class="k">SFX por cena</span><span class="d">Efeito sonoro no tempo certo da cena — "porta rangendo", "trovão" (3 créd/cena).</span></div>
+        <div class="ctrl"><span class="k">Ambiente / Uniformizar cor / Fluidez</span><span class="d">Som-ambiente contínuo (3 créd), exposição uniforme entre cenas e interpolação de movimento 2× — agora também nas Histórias/Quadrinhos.</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica de ordem</span>
+        Gere o roteiro → ajuste as narrações → gere as imagens (na ordem, pra o encadeamento funcionar) → gere os
+        clipes → configure narração/legenda → <b>Montar Short</b> → <b>Gerar textos do post</b> → Aprovar → Publicar.</div></div>
+    </section>
+
+    <!-- ============ QUADRINHOS ============ -->
+    <section class="feat" id="quadrinhos">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">📖</span>Quadrinhos</h2>
+      <p class="what">O episódio <b>só imagem + narração</b> — sem clipes de vídeo por cena. A voz dita o
+        ritmo e cada cena entra como a imagem dela com um <b>movimento suave</b> (zoom lento) na montagem.
+        A geração fica <b>~10× mais barata</b> que a História em vídeo (e a montagem custa <b>40 créd</b> em vez
+        do Short cheio) — feito pra episódios diários (boneco palito, tirinhas, livro ilustrado, canais faceless).</p>
+      <div class="note tip"><span class="ic">✨</span><div><span class="lbl">Agora é um FORMATO da aba única</span>
+        Quadrinhos é um formato do <b>🪄 Estúdio de Animação</b> (aba única): escolha <b>📖 Quadrinhos</b> no
+        select <b>“O que você quer gerar?”</b> — 4 passos: <b>Roteiro → Elementos → Storyboard → Episódio</b>
+        (não existe etapa de animação — os quadros são slides). O link <span class="opt">/quadrinhos</span>
+        continua funcionando. A tela clássica segue no botão <b>“🕰 usar a tela clássica”</b>; rascunho
+        antigo também pode ser trazido pro wizard pelo botão <b>📥 Importar</b>.</div></div>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">1 · Roteiro</span><span class="d">Descreva o tema (ou cole um roteiro). A IA escreve a história e a <b>narração de cada cena</b> no ritmo certo pra imagem parada: 1 ação clara por cena, gancho constante. Escolha voz do narrador, estilo, nº de cenas (até 20), formato e os <b>🧠 modelos</b> (roteiro/🖼 imagem) com o <span class="cost">custo</span> visível.</span></div>
+        <div class="ctrl"><span class="k">2 · Elementos</span><span class="d">Personagens/locações/objetos com referência visual travada (mesma identidade em todos os quadros) — ⟳ regenere ou ✏️ edite o prompt antes de aprovar.</span></div>
+        <div class="ctrl"><span class="k">3 · Storyboard</span><span class="d">Um quadro por cena + o texto da narração editável debaixo de cada um. 🔒 trave os aprovados.</span></div>
+        <div class="ctrl"><span class="k">4 · Episódio</span><span class="d">Montagem por <b>40 créd</b>: slides com Ken Burns no ritmo da voz + legenda + música + Estúdio de Efeitos (filtro, transições, som ambiente…). Vai pra galeria → Aprovar → Publicar.</span></div>
+        <div class="ctrl"><span class="k">Estilo</span><span class="d">Stickman (boneco palito), 2D Cartoon e Livro infantil funcionam muito bem no formato.</span></div>
+        <div class="ctrl"><span class="k">Voz</span><span class="d">Qualquer voz da conta — inclusive a sua voz clonada.</span></div>
+      </div>
+      <div class="flow"><div class="t">Fluxo</div><div class="d">
+        Descreva o tema → aprove elementos e storyboard → ajuste as narrações → <b>Montar o episódio</b> →
+        <b>Gerar textos do post</b> → Aprovar → Publicar. Ou <b>✨ Criar tudo automaticamente</b>.</div></div>
+    </section>
+
+    <!-- ============ ANIMAÇÃO ============ -->
+    <section class="feat" id="animacao">
+      <span class="kicker">Estúdio · aba única</span>
+      <h2><span class="em">🪄</span>Estúdio de Animação</h2>
+      <p class="what">A aba ÚNICA de vídeo em cenas: o select <b>“O que você quer gerar?”</b> escolhe o formato —
+        <b>🎬 História narrada</b>, <b>📖 Quadrinhos</b> (slides) ou <b>🪄 Desenho animado</b> (multi-voz).
+        No desenho animado, cole um roteiro (ou só a ideia) e saia com um <b>desenho pronto</b> — personagens
+        consistentes, cenário fixo e <b>cada personagem falando com a própria voz</b>. A IA extrai os elementos,
+        gera as referências pra você aprovar, monta o storyboard cena a cena, anima tudo e entrega o filme
+        montado com trilha — direto pra galeria e publicação. Abrir um projeto antigo troca o formato sozinho.</p>
+      <div class="note why"><span class="ic">🎯</span><div><span class="lbl">O que é a “Qualidade” (Econômico/Padrão/Premium)</span>
+        É um <b>preset que escolhe os modelos automáticos</b> de imagem e vídeo de cada etapa — Econômico usa os
+        mais baratos, Premium os melhores. Se você escolher um <b>🧠 modelo específico</b> nos seletores, ele
+        <b>vence o preset</b> (e a estimativa de créditos recalcula).</div></div>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">1 · Roteiro</span><span class="d">Cole o roteiro pronto (só os diálogos bastam) ou descreva a ideia — a IA escreve a história. Escolha o estilo (3D fofo, 2D cartoon, stickman, anime ou <b>realista</b>), a qualidade, o nº de cenas e os <b>🧠 modelos</b> (roteiro/🖼 imagem/🎬 vídeo) com o <span class="cost">custo em créditos</span> visível — vazio = automático pela qualidade. Dá pra trocar o modelo no meio do projeto (a estimativa recalcula).</span></div>
+        <div class="ctrl"><span class="k">2 · Elementos</span><span class="d">Personagens, locações e objetos extraídos do roteiro, cada um com a referência visual. Não gostou de um? <b>⟳ regenera</b> ou <b>✏️ edita o prompt</b> e gera de novo. Cada personagem ganha uma <b>voz própria</b> (troque no seletor). <b>🎭 Usar personagem da biblioteca</b>: escolha um personagem salvo (aba Personagens) e ele vira a identidade do papel — a imagem-base entra como referência e o lock como prompt, <b>sem custo</b>.</span></div>
+        <div class="ctrl"><span class="k">3 · Storyboard</span><span class="d">Uma imagem por cena, com identidade ancorada nas referências + paleta fixa do projeto. Regenere as cenas que saírem inconsistentes e <b>🔒 trave</b> as aprovadas.</span></div>
+        <div class="ctrl"><span class="k">4 · Animação</span><span class="d">Cada cena vira vídeo a partir do keyframe; as falas viram áudio com a voz de cada personagem e entram na cena.</span></div>
+        <div class="ctrl"><span class="k">5 · Filme</span><span class="d">Montagem final com trilha sonora e cor casada entre as cenas → galeria → Aprovar → Publicar.</span></div>
+        <div class="ctrl"><span class="k">🎬 Criar o desenho</span><span class="d">A IA estrutura o roteiro (personagens, cenas, falas) e você segue o passo a passo — a estimativa de custo aparece antes de cada geração, e dá pra regenerar só o que quiser.</span></div>
+        <div class="ctrl"><span class="k">🔀 Modos</span><span class="d">O mesmo estúdio roda as abas <a href="#historias">Histórias</a> (narração única + cenas em vídeo) e <a href="#quadrinhos">Quadrinhos</a> (narração única + slides, sem animação) — mesmos passos, montagem diferente.</span></div>
+        <div class="ctrl"><span class="k">Ferramentas de craft</span><span class="d"><b>🎬 Roteirista</b> e <b>🎥 Diretor</b> (da aba Prompts) + <b>🌀 Ritmo</b> mudam como a história é escrita/filmada; <b>🎬 Planejar estrutura</b> (Sala de Roteiro) gera a espinha dramática editável antes de estruturar; <b>🩺 Crítica</b> = script doctor com notas por cena.</span></div>
+        <div class="ctrl"><span class="k">Ferramentas do quadro</span><span class="d"><b>🎲 3 variações</b> (escolha a melhor, 3× o tier), <b>✏️ Imagem</b> (edição i2i "mude só isto"), <b>📌 Fixar</b> (da galeria, sem custo), <b>🌍 cenário da biblioteca</b> nas locações. Nas cenas: <b>⏱ 5s/10s</b>, <b>✨ melhorar antes de animar</b> e <b>🎬 vídeo da galeria</b>.</span></div>
+        <div class="ctrl"><span class="k">Montagem completa</span><span class="d">Tier da narração, atraso da voz, ajuste fino + <b>💬 legenda completa com prévia</b>, <b>🎇 SFX/VFX por cena</b>, efeitos de acabamento — e depois <b>✍️ Gerar textos do post</b>, <b>📥 Exportar ZIP</b> e <b>📣 Aprovar</b> direto do resultado.</span></div>
+      </div>
+      <div class="flow"><div class="t">Fluxo</div><div class="d">
+        Cole o roteiro → <b>Estruturar</b> → aprove as referências → <b>Gerar storyboard</b> →
+        <b>Animar cenas</b> → <b>Montar o desenho</b> → Aprovar → Publicar. Ou aperte
+        <b>✨ Criar tudo automaticamente</b> e volte quando estiver pronto.</div></div>
+    </section>
+
+    <!-- ============ FILME ============ -->
+    <!-- ============ MOVIES ============ -->
+    <section class="feat" id="movies">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">🎞️</span>Movies</h2>
+      <p class="what">A aba de filmes: um caminho só, guiado, <b>uma etapa por vez</b> —
+        da ideia ao filme pronto sem decidir “qual botão apertar”. A antiga aba Filme foi
+        <b>absorvida aqui</b> (2026-07-19): keyframes finos, modo corrente, prévia rápida e ajuste
+        fino da montagem agora vivem nas etapas certas do fluxo.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">🏠 Meus filmes</span><span class="d">A home lista <b>todos os seus filmes</b> (inclusive em andamento) como projetos — clique num card pra retomar exatamente de onde parou, ou em <b>➕ Novo filme</b>. O <b>🗑️</b> no card exclui o filme (com confirmação; o rascunho e a mídia dele somem da galeria).</span></div>
+        <div class="ctrl"><span class="k">1 · Ideia</span><span class="d">Descreva o filme num campo só (templates por segmento ajudam: imobiliário, produto, food, moda…). Escolha duração (1–2min) e formato. Ajustes técnicos ficam recolhidos em ⚙️.</span></div>
+        <div class="ctrl"><span class="k">2 · Plano</span><span class="d">A IA entrega o roteiro em trechos editáveis (quadro, câmera, locução). 🔒 trava um trecho que você aprovou; ↻ regenera uma seção inteira (roteiro/storyboard/locução/câmera/música) sem tocar nos travados.</span></div>
+        <div class="ctrl"><span class="k">3 · Elenco</span><span class="d">Os personagens/produtos/cenários do filme com <b>referência visual travada</b> — a MESMA identidade em todos os quadros. Gere as referências, troque pela galeria ou adicione manualmente.</span></div>
+        <div class="ctrl"><span class="k">4 · Storyboard</span><span class="d">Uma imagem com TODOS os quadros do filme. Clique num painel pra 🩹 consertar um detalhe ou 🔄 recompor a cena. <b>Confira aqui antes de gerar</b> — o filme segue o storyboard à risca.</span></div>
+        <div class="ctrl"><span class="k">5 · Gerar</span><span class="d">O caminho depende do modelo escolhido: <b>⚡ blocos</b> de até 3 cortes ancorados no storyboard (recomendado), <b>🎬 trecho a trecho</b> preso aos quadros (início+fim, em paralelo) ou <b>🔗 corrente</b> (sequencial, mais barato). Bloco/trecho ruim? 🔁 regenera <b>só ele</b>.</span></div>
+        <div class="ctrl"><span class="k">⚡ Prévia rápida</span><span class="d">Opcional (modelos multi-corte): o filme inteiro num <b>teaser de até 15s numa ÚNICA geração barata</b> — valide movimento e identidade ANTES de gastar nos blocos. Também vale como <b>filme expresso</b>: dá pra montar e publicar só com ela.</span></div>
+        <div class="ctrl"><span class="k">🎞️ Quadros do filme</span><span class="d">No caminho por trechos, o ✂️ recorta o storyboard em quadros (custo zero) e cada quadro pode ser <b>🩹 ajustado no lugar</b> (a IA muda só o que você pedir), trocado por uma imagem da <b>galeria</b> ou por uma <b>foto do computador</b>.</span></div>
+        <div class="ctrl"><span class="k">6 · Filme</span><span class="d">Montagem final com música, narração, legendas e filtro de cor — e o <b>🎛️ Ajuste fino</b> recolhido: transição entre trechos, intensidade do filtro, color-match, fluidez 2× fps, grain, letterbox, som ambiente e endcard de marca. Depois: textos por rede e <b>Aprovar e publicar</b>.</span></div>
+      </div>
+      <div class="note"><span class="ic">🧭</span><div><span class="lbl">O caminho é guiado — mas você manda</span>
+        As etapas destravam conforme os pré-requisitos ficam prontos, e você pode <b>voltar a qualquer etapa</b>
+        já liberada (ex.: consertar um painel do storyboard e regerar só o bloco afetado). Toda geração longa entra
+        na <b>Central de Tarefas</b> — troque de aba à vontade que o Reachyn avisa quando terminar.</div></div>
+      <div class="note why"><span class="ic">🎯</span><div><span class="lbl">Histórias × Movies</span>
+        <b>Histórias</b> = cenas independentes com corte (bom pra narrativa/Shorts). <b>Movies</b> = filme/comercial
+        completo e coeso (bom pra marca/produto/vitrine). Modelos com controle de <b>início+fim</b> prendem cada
+        trecho aos quadros (sem drift); o <b>modo corrente</b> é mais barato (cada trecho parte do fim do anterior).</div></div>
+      <div class="note"><span class="ic">⚡</span><div><span class="lbl">Gere vários ao mesmo tempo — e não perca o acompanhamento</span>
+        Blocos e trechos independentes geram <b>em paralelo</b>. Se um falhar, os demais seguem (regere só o que
+        faltou). Toda geração longa entra na <b>Central de Tarefas (🔔 no topo)</b> — você pode <b>trocar de aba</b> que
+        ela avisa quando ficar pronto, e o sistema <b>tenta de novo sozinho</b> se der um erro passageiro.</div></div>
+    </section>
+
+    <!-- ============ AVENTURAS ============ -->
+    <section class="feat" id="aventuras">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">🗺️</span>Aventuras</h2>
+      <p class="what">Junta <b>filmes prontos</b> (com a montagem final feita) numa <b>história maior e contínua</b> —
+        ex. 5 filmes de 1-2 minutos viram uma aventura de 5-10 minutos, na ordem que você escolher.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">1 · Filmes prontos</span><span class="d">Todos os filmes do projeto que já têm o vídeo final montado na aba Movies. Clique em ➕ pra colocar na sequência (pode repetir).</span></div>
+        <div class="ctrl"><span class="k">2 · Sequência</span><span class="d">A ordem aqui é a ordem do filmão — use ↑/↓ pra reordenar e ✕ pra tirar. Dê um nome à aventura e escolha a <b>transição</b> entre um filme e o próximo (corte seco é grátis; fade custa 1 crédito de efeito por corte).</span></div>
+        <div class="ctrl"><span class="k">Trilha única (opcional)</span><span class="d">Cada filme já vem com a própria trilha. Ligue só se quiser UMA música por cima da aventura inteira.</span></div>
+        <div class="ctrl"><span class="k">3 · Suas aventuras</span><span class="d">A montagem leva alguns minutos e aparece aqui e na <a href="#galeria">Galeria</a> (categoria Filmes), pronta pra <a href="#aprovar">aprovar</a> e publicar.</span></div>
+      </div>
+      <div class="note why"><span class="ic">🎯</span><div><span class="lbl">Movies × Aventura</span>
+        O <b>Movies</b> gera uma peça só (30s-2min). A <b>Aventura</b> é a temporada: capítulos
+        que você já montou, emendados num vídeo longo — bom pra YouTube, aula, episódio ou saga de marca.</div></div>
+    </section>
+
+    <!-- ============ PERSONAGENS ============ -->
+    <section class="feat" id="personagens">
+      <span class="kicker">Estúdio</span>
+      <h2><span class="em">👤</span>Personagens</h2>
+      <p class="what">Cria um <b>personagem-base consistente</b> (com todas as opções de estilo) e o <b>model sheet</b>
+        de referência — pra manter a integridade dele em todas as cenas, histórias e filmes.</p>
+      <ol class="steps">
+        <li><b>+ Novo personagem</b> — descreva (ou extraia de uma imagem) e escolha o estilo.</li>
+        <li><b>Gerar base</b> — a IA cria a imagem-base (a âncora do personagem). ~20–30s.</li>
+        <li><b>Gerar model sheet</b> — gera as folhas de referência com <b>layout fixo</b>: turnaround (10 ângulos),
+          cabeça &amp; expressões, poses (ação e atitude), acessórios &amp; vestimenta (peças em catálogo + personagem
+          vestido) e paleta &amp; texturas. Cada foto é gerada individualmente ancorada na base e as folhas são
+          montadas num template padronizado — mesmo personagem, mesmo layout, sempre.</li>
+        <li>Use o personagem na <a href="#historias">Histórias</a> / <a href="#movies">Movies</a> — as cenas ancoram na
+          imagem-base <b>e</b> na folha de turnaround, seguindo o character lock e o model sheet.</li>
+      </ol>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Gerar base / ↻ Regerar</span><span class="d">Cria (ou refaz) a imagem-base. Mostra <b>“Gerando base…”</b> na hora; só marca pronto quando a imagem realmente sai.</span></div>
+        <div class="ctrl"><span class="k">Gerar model sheet</span><span class="d">Gera as 5 folhas (só habilita depois da base). A bíblia do personagem é montada junto. Personagem sem roupa/acessórios não gera a folha de vestimenta.</span></div>
+        <div class="ctrl"><span class="k">↻ Regerar / ✏️ Editar (por folha)</span><span class="d">Refaz UMA folha no lugar (as outras ficam); o Editar aceita um ajuste livre (ex.: “expressões mais alegres”).</span></div>
+        <div class="ctrl"><span class="k">Planos de câmera</span><span class="d">Folha extra (opcional) com o personagem em enquadramentos cinematográficos.</span></div>
+        <div class="ctrl"><span class="k">Adicionar figurino</span><span class="d">Descreve uma roupa e a IA troca só o figurino, mantendo rosto/corpo.</span></div>
+        <div class="ctrl"><span class="k">Bíblia · Character Lock</span><span class="d">Paleta, traços, acessórios e expressões destilados; o lock verbatim que trava a aparência.</span></div>
+        <div class="ctrl"><span class="k">Ajustar a imagem-base (i2i) · Editar / Detalhes</span><span class="d">Descreve um ajuste (ex.: “óculos maiores”) e regenera; edita metadados; abre o detalhe.</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica</span>
+        A geração é assíncrona: ~30s (base) e alguns minutos (model sheet completo — são ~30 fotos individuais).
+        O card avisa “Gerando…” e as folhas aparecem uma a uma — <b>aguarde</b>;
+        clicar de novo no mesmo personagem enquanto gera é bloqueado (“já existe uma geração”).</div></div>
+    </section>
+
+    <!-- ============ PUBLICAR GROUP ============ -->
+    <div class="grpttl">Publicar</div>
+
+    <section class="feat" id="otimizar">
+      <span class="kicker">Publicar</span>
+      <h2><span class="em">🚀</span>Otimizar</h2>
+      <p class="what">A <b>ponta da publicação</b>: transforma o tema do seu vídeo num <b>pacote pronto
+        pra postar</b>. Aquele trabalho manual de título, descrição e hashtags — aqui sai num clique.</p>
+
+      <h3>Como usar</h3>
+      <p>Escreva o <b>tema ou título</b> do vídeo, escolha a <b>rede</b> e o <b>idioma</b>, e clique em
+        <b>Gerar pacote</b>. Você recebe:</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">🏆 5 títulos</span><span class="d">cada um com uma <b>nota de clique (🔥 1-10)</b> — o de nota mais alta tende a vencer. Copie o que preferir.</span></div>
+        <div class="ctrl"><span class="k">📝 Descrição SEO</span><span class="d">com a palavra-chave na 1ª linha e chamada pra ação no fim — copiar tudo num botão.</span></div>
+        <div class="ctrl"><span class="k"># Hashtags & Tags</span><span class="d">3-5 hashtags (1 ampla + nicho) e, no YouTube, 8-15 tags de busca.</span></div>
+        <div class="ctrl"><span class="k">🖼️ Conceitos de thumbnail</span><span class="d">2-3 ideias visuais <b>sem rosto</b>, com texto ≤4 palavras e paleta — copie como prompt e gere a imagem na aba <b>Mídia</b>.</span></div>
+        <div class="ctrl"><span class="k">🕐 Melhor horário</span><span class="d">a janela ideal de publicação da rede escolhida (horário de Brasília).</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica</span>
+        Gerar o pacote custa <b>1 crédito de texto</b>. Rode uma vez por rede pra ter títulos e tags
+        sob medida pra cada uma (o YouTube pede título+tags; o TikTok/Reels pedem gancho curto).</div></div>
+    </section>
+
+    <section class="feat" id="reaproveitar">
+      <span class="kicker">Publicar</span>
+      <h2><span class="em">♻️</span>Reaproveitar</h2>
+      <p class="what"><b>Um vira dez.</b> Cole um conteúdo longo (roteiro, transcrição de live/podcast
+        ou um tema desenvolvido) e a IA multiplica numa <b>semana de posts</b> — sem você produzir tudo
+        de novo. <em>Poste todo dia sem gravar todo dia.</em></p>
+
+      <h3>O que sai</h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">✂️ 5 Shorts</span><span class="d">cada um com o <b>trecho a cortar</b> (timestamp quando o conteúdo tem tempo) e o <b>gancho de 3s</b> que abre o clipe.</span></div>
+        <div class="ctrl"><span class="k">🗂️ 1 Carrossel</span><span class="d">um título + 5-8 slides que contam a ideia central — copiar tudo num botão.</span></div>
+        <div class="ctrl"><span class="k">💬 1 Thread</span><span class="d">5-8 posts encadeados (X), começando por um gancho forte.</span></div>
+        <div class="ctrl"><span class="k">📌 1 Pin</span><span class="d">a legenda de um post fixado com o maior aprendizado do conteúdo.</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica</span>
+        Reusa a <b>mídia que você já gerou</b>: os Shorts saem do vídeo longo, os slides do carrossel
+        podem usar as imagens da Galeria. Custa <b>1 crédito de texto</b> por conteúdo reaproveitado.</div></div>
+    </section>
+
+    <section class="feat" id="subir">
+      <span class="kicker">Publicar · seção completa</span>
+      <h2><span class="em">➕</span>Novo post (subir mídia pronta)</h2>
+      <p class="what">A antiga aba “Subir e publicar” virou o botão <b>➕ Novo</b> dentro do
+        <a href="#publicar">Publicar</a>: mídia que <b>você mesmo sobe já está aprovada por definição</b> —
+        não passa pela fila do Aprovar. Escolhe o arquivo (ou uma peça da galeria), gera a legenda
+        <b>de cada rede</b> a partir de um prompt e publica <b>direto</b>.</p>
+
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Prompt / tema</span><span class="d">O assunto do post — é dele que a IA escreve a legenda de cada rede. Quanto mais concreto, melhor o texto.</span></div>
+        <div class="ctrl"><span class="k">Mídia pronta</span><span class="d">Do computador (JPG, PNG, WEBP, GIF, MP4, MOV até 100&nbsp;MB) ou pelo botão <b>📁 Escolher da galeria</b>, que reaproveita o que você já gerou aqui — sem baixar e subir de novo.</span></div>
+        <div class="ctrl"><span class="k">Redes</span><span class="d">Marque uma ou mais. Só aparecem as que estão conectadas em <a href="#conexoes">Conexões</a>.</span></div>
+        <div class="ctrl"><span class="k">✨ Gerar textos</span><span class="d">Escreve a legenda de <b>cada rede selecionada</b> a partir do prompt — o mesmo redator da aba <a href="#conteudo">Conteúdo</a>. Cada texto é editável, e o <b>↻</b> ao lado da rede regenera só ela.</span></div>
+        <div class="ctrl"><span class="k">🚀 Publicar</span><span class="d">Publica direto nas redes marcadas — sem fila de aprovação. Toda rede selecionada precisa ter texto (gerado ou escrito) antes.</span></div>
+      </div>
+
+      <div class="note"><span class="ic">🤖</span><div><span class="lbl">Confira o que a IA escrever</span>
+        A legenda gerada costuma vir com <b>números e datas específicos</b> — market share, valores de mercado,
+        acordos, anos. Nem tudo é verificado. Legenda de marca com dado inventado é um problema maior que legenda
+        fraca: <b>leia antes de publicar</b>.</div></div>
+
+      <h3>👽 Reddit — a rede que se comporta diferente</h3>
+      <p class="what">No Reddit um post é de <b>um tipo só</b>, e a escolha muda o que aparece. As opções abaixo
+        aparecem quando você marca Reddit.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Alvo: r/ ou u/</span><span class="d"><span class="opt">r/comunidade</span> publica numa comunidade (que tem regras e moderação próprias); <span class="opt">u/perfil</span> publica no <b>seu próprio perfil</b>. O alvo é <b>obrigatório</b> — sem ele o post cairia num padrão da conta que ninguém escolheu, e publicar no lugar errado não tem desfazer.</span></div>
+        <div class="ctrl"><span class="k">Formato: imagem ou texto</span><span class="d"><b>Imagem</b> mostra a foto no feed e o texto vira só o <b>título</b>. <b>Texto</b> publica o texto completo e a imagem vira link. Não existe post com foto no feed <i>e</i> corpo — é um ou o outro.</span></div>
+        <div class="ctrl"><span class="k">Título (até 300)</span><span class="d">No formato imagem é o <b>único texto</b> que acompanha a foto. <b>O título é permanente</b>: o Reddit não deixa editar depois de publicado. Vazio, usa a primeira linha da legenda.</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💬</span><div><span class="lbl">Foto no feed E texto completo</span>
+        No formato <b>imagem</b>, o corpo da legenda é publicado automaticamente como <b>primeiro comentário</b> do
+        post — que é o costume da própria rede. Assim a peça fica completa: foto no feed e o texto logo abaixo.</div></div>
+    </section>
+
+    <section class="feat" id="aprovar">
+      <span class="kicker">Publicar</span>
+      <h2><span class="em">✅</span>Aprovar</h2>
+      <p class="what">A revisão final antes de publicar: você vê o texto por rede e faz os últimos ajustes.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Editor por rede</span><span class="d">Ajusta o texto de cada rede. Selecione um trecho e use <b>B</b> (negrito) / <b>I</b> (itálico).</span></div>
+        <div class="ctrl"><span class="k">Prévia por rede</span><span class="d">Mostra ao lado como o post fica em cada rede.</span></div>
+        <div class="ctrl"><span class="k">Aprovar e ir pra Publicar</span><span class="d">Fecha a revisão e leva pro Publicar. <b>Editar no editor completo</b> abre o editor grande; <b>Rejeitar/descartar</b> volta atrás.</span></div>
+      </div>
+    </section>
+
+    <section class="feat" id="publicar">
+      <span class="kicker">Publicar</span>
+      <h2><span class="em">🚀</span>Publicar</h2>
+      <p class="what">O disparo final: escolhe as redes e os perfis, e publica.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Resumo (Tema / Plataformas / Mídia)</span><span class="d">Confirma o que vai sair: tema, redes e quantas imagens/vídeos. (Até 4 imagens por rede; a 1ª vira capa no blog.)</span></div>
+        <div class="ctrl"><span class="k">Publicar em — selecione as redes</span><span class="d">Marca só as redes que têm texto. <b>Gerenciar</b> escolhe os perfis-alvo (multi-perfil).</span></div>
+        <div class="ctrl"><span class="k">Alvo do Reddit</span><span class="d">Onde postar: <span class="opt">r/comunidade</span> ou <span class="opt">u/seu-perfil</span>. É <b>obrigatório</b> — publicar no lugar errado não tem desfazer. O formato do post (imagem ou texto) e o título permanente seguem as mesmas regras do <a href="#subir">Novo post</a>.</span></div>
+        <div class="ctrl"><span class="k">🚀 Publicar agora</span><span class="d">Envia pra todas as redes selecionadas. O status por rede aparece em seguida (e em Publicações).</span></div>
+      </div>
+    </section>
+
+    <section class="feat" id="publicacoes">
+      <span class="kicker">Publicar</span>
+      <h2><span class="em">📊</span>Publicações</h2>
+      <p class="what">O <b>histórico</b> do que foi publicado: status por rede (✅/❌), link do post e a opção de
+        <b>republicar</b> as que falharam — sem refazer o conteúdo.</p>
+      <div class="note"><span class="ic">🔗</span><div><span class="lbl">O link demora alguns segundos</span>
+        Publicar é assíncrono: a rede aceita o post e só depois devolve o endereço dele. Em vídeo isso leva alguns
+        segundos a mais, porque o arquivo ainda está subindo. Se a peça aparecer publicada e sem link, é isso —
+        ela está no ar de qualquer forma.</div></div>
+    </section>
+
+    <section class="feat" id="conexoes">
+      <span class="kicker">Publicar</span>
+      <h2><span class="em">🔗</span>Conexões</h2>
+      <p class="what">Onde você conecta as contas das redes sociais. As contas ficam organizadas em <b>perfis</b>
+        (ex.: Marca, Pessoal, Cliente X) — na hora de publicar você escolhe em quais perfis postar.</p>
+      <div class="note warn"><span class="ic">⚠️</span><div><span class="lbl">Antes de conectar</span>
+        Esteja <b>logado na conta da rede social neste mesmo navegador</b>. A conexão abre o login da própria
+        plataforma — se você estiver deslogado (ou na conta errada), conecta a conta errada ou falha.</div></div>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Perfil</span><span class="d">Um conjunto de contas. <b>+ Adicionar perfil</b> cria quantos precisar (Marca, Cliente…).</span></div>
+        <div class="ctrl"><span class="k">Conectar / Conectar outra</span><span class="d">Liga uma conta da rede ao perfil (abre o OAuth da plataforma).</span></div>
+        <div class="ctrl"><span class="k">Remover</span><span class="d">Desconecta a conta daquela rede.</span></div>
+      </div>
+      <div class="note why"><span class="ic">💳</span><div><span class="lbl">Custo</span>
+        Publicação é cobrada por <b>rede conectada</b> (cota local cada) — separado da geração de conteúdo.</div></div>
+    </section>
+
+    <!-- ============ BIBLIOTECA GROUP ============ -->
+    <div class="grpttl">Biblioteca</div>
+
+    <section class="feat" id="galeria">
+      <span class="kicker">Biblioteca</span>
+      <h2><span class="em">🗂️</span>Galeria</h2>
+      <p class="what">Toda a mídia gerada no workspace, num lugar só.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Filtros</span><span class="d"><span class="opt">Tudo</span> <span class="opt">Imagens</span> <span class="opt">GIFs</span> <span class="opt">Logos</span> <span class="opt">Histórias</span> <span class="opt">Filmes</span> <span class="opt">Vídeos</span> <span class="opt">Áudios</span>.</span></div>
+        <div class="ctrl"><span class="k">Ampliar / Baixar / Excluir</span><span class="d">Abre em tela cheia, baixa o arquivo ou apaga. Seleção múltipla pra ações em lote.</span></div>
+        <div class="ctrl"><span class="k">Melhorar / Remover fundo</span><span class="d">Pós-processamento das imagens (upscale e PNG transparente).</span></div>
+      </div>
+    </section>
+
+    <section class="feat" id="prompts">
+      <span class="kicker">Biblioteca</span>
+      <h2><span class="em">📚</span>Prompts</h2>
+      <p class="what">Sua biblioteca de instruções reutilizáveis — e onde vivem a identidade da marca e os
+        catálogos criativos.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">🗣️ Voz da Marca</span><span class="d">Tom, vocabulário e restrições da sua marca — <b>aplicados em todo texto gerado</b> (posts, resumos, roteiros, locuções).</span></div>
+        <div class="ctrl"><span class="k">🎨 Brand Kit visual</span><span class="d">Cor, logo e @ da marca — usados no <b>“Vestir com a marca”</b> (título, logo e CTA sobre a imagem).</span></div>
+        <div class="ctrl"><span class="k">🎬 Roteiristas (18)</span><span class="d">Craft/voz que muda <b>como o texto é escrito</b>. Editáveis; dá pra criar novos.</span></div>
+        <div class="ctrl"><span class="k">🎥 Diretores (14)</span><span class="d">Direção visual que muda <b>como as cenas parecem</b>. Editáveis.</span></div>
+        <div class="ctrl"><span class="k">Prompts gerais</span><span class="d">Prompts salvos de imagem/vídeo pra reusar (Copiar / Editar / Excluir). <b>+ Novo prompt</b>.</span></div>
+      </div>
+      <div class="note tip"><span class="ic">📖</span><div><span class="lbl">Catálogo completo</span>
+        O que cada um dos 18 roteiristas, 14 diretores e 15 planos de câmera faz está logo abaixo, no
+        <a href="#catalogo"><b>Catálogo criativo</b></a>.</div></div>
+    </section>
+
+    <!-- ============ CATÁLOGO CRIATIVO ============ -->
+    <section class="feat" id="catalogo">
+      <span class="kicker">Biblioteca · referência</span>
+      <h2><span class="em">🎭</span>Catálogo criativo</h2>
+      <p class="what">O que <b>cada</b> Roteirista, Diretor e Plano de câmera faz. A regra de ouro:
+        <b>Roteirista</b> pelo tom do texto · <b>Diretor</b> pela estética do vídeo · <b>Câmera</b> por cena —
+        e Roteirista + Diretor <b>se somam</b> (a craft escreve, a direção filma).</p>
+
+      <h3>🎬 Roteiristas — como o texto é escrito <span style="color:var(--soft);font-weight:400">(18)</span></h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Geral (Mestre)</span><span class="d">Padrão versátil — craft combinada (McKee/Field + espinha Pixar + Save the Cat + Hitchcock/Chaplin + Miyazaki + catarse de Aristóteles).</span></div>
+        <div class="ctrl"><span class="k">Viral / Hooks</span><span class="d">Retenção máxima em Reels/TikTok — gancho de 2s, loop aberto, pattern interrupt.</span></div>
+        <div class="ctrl"><span class="k">Marketing / Vídeo</span><span class="d">Gancho em 3s, o problema que dói, uma CTA clara (StoryBrand: o cliente é o herói).</span></div>
+        <div class="ctrl"><span class="k">Educativo</span><span class="d">Clareza cristalina, analogias do dia a dia, momento “aha” (Feynman, zero jargão).</span></div>
+        <div class="ctrl"><span class="k">Tutorial / How-to</span><span class="d">Passo a passo, um passo por cena no imperativo, o erro comum de cada etapa.</span></div>
+        <div class="ctrl"><span class="k">Curiosidades / Fatos</span><span class="d">Abre com o fato mais surpreendente e explica o porquê em linguagem de bar.</span></div>
+        <div class="ctrl"><span class="k">Drama</span><span class="d">Verdade emocional, subtexto (o não-dito pesa), catarse.</span></div>
+        <div class="ctrl"><span class="k">Comédia</span><span class="d">Regra de três, escalada absurda, timing visual/slapstick.</span></div>
+        <div class="ctrl"><span class="k">Terror / Suspense</span><span class="d">Dread pela demora e silêncio, cotidiano ameaçador (Carpenter/King/Hitchcock).</span></div>
+        <div class="ctrl"><span class="k">Inspiracional</span><span class="d">Superação — do fundo do poço à virada por ação concreta, lição aplicável.</span></div>
+        <div class="ctrl"><span class="k">Infantil</span><span class="d">Simplicidade, núcleo emocional verdadeiro, encanto (Pixar/Ghibli).</span></div>
+        <div class="ctrl"><span class="k">Games</span><span class="d">Environmental storytelling (o cenário conta), personagem acima da trama.</span></div>
+        <div class="ctrl"><span class="k">Jornalístico</span><span class="d">Pirâmide invertida — fato mais importante primeiro, dados com fonte.</span></div>
+        <div class="ctrl"><span class="k">Corporativo / LinkedIn</span><span class="d">Thought leadership sóbrio, insight que desafia o senso comum, posição clara.</span></div>
+        <div class="ctrl"><span class="k">Conversacional / Podcast</span><span class="d">Tom de conversa, ritmo de quem pensa junto com o ouvinte.</span></div>
+        <div class="ctrl"><span class="k">Threads / X</span><span class="d">Fios magnéticos — cada tweet uma ideia + open loop, fecha pedindo ação.</span></div>
+        <div class="ctrl"><span class="k">Lançamento de Produto</span><span class="d">Feature vira benefício concreto, prova antes da promessa, urgência honesta.</span></div>
+        <div class="ctrl"><span class="k">Resumidor Executivo</span><span class="d">Resumo BLUF (conclusão na 1ª linha) + bullets com um dado cada. Usado nos resumos.</span></div>
+      </div>
+
+      <h3>🎥 Diretores — como as cenas parecem <span style="color:var(--soft);font-weight:400">(14)</span></h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Produto</span><span class="d">Estilo Apple — minimalismo, fundo limpo, órbita lenta no produto-herói, macro nos detalhes.</span></div>
+        <div class="ctrl"><span class="k">Food</span><span class="d">Macro de texturas (vapor, calda, crosta), luz lateral quente (estilo Chef's Table).</span></div>
+        <div class="ctrl"><span class="k">Food-service / Delivery</span><span class="d">Apetite em 2s (“food porn” honesto), cortes rápidos, cores quentes saturadas.</span></div>
+        <div class="ctrl"><span class="k">Luxo / Lifestyle</span><span class="d">Ritmo lento, closes de texturas nobres (couro/mármore), luz suave e elegante.</span></div>
+        <div class="ctrl"><span class="k">Moda</span><span class="d">Fashion film — movimento do tecido e do corpo, travellings elegantes, meia-velocidade.</span></div>
+        <div class="ctrl"><span class="k">Automotivo</span><span class="d">Câmera como 2º veículo — rasante no asfalto, orbitando a carroceria; poder + design.</span></div>
+        <div class="ctrl"><span class="k">Esporte / Ação</span><span class="d">Câmera que persegue (gimbal/FPV), ângulos baixos, o esforço em close.</span></div>
+        <div class="ctrl"><span class="k">Natureza / Aéreo</span><span class="d">Drone amplo e lento, golden/blue hour, escala monumental.</span></div>
+        <div class="ctrl"><span class="k">Imobiliário</span><span class="d">Tour fluido (fachada → ambientes → rooftop com drone), golden hour.</span></div>
+        <div class="ctrl"><span class="k">Institucional</span><span class="d">Pessoas reais vivendo o propósito da marca, um movimento costurando ambientes.</span></div>
+        <div class="ctrl"><span class="k">Eventos / Shows</span><span class="d">A multidão como protagonista, luzes de palco varrendo a lente, slow motion.</span></div>
+        <div class="ctrl"><span class="k">Documental (vérité)</span><span class="d">Câmera na mão discreta, luz 100% natural, momentos não-posados.</span></div>
+        <div class="ctrl"><span class="k">Kids / Animação</span><span class="d">Câmera na altura da criança, cores saturadas, movimento brincalhão.</span></div>
+        <div class="ctrl"><span class="k">Saúde / Clínicas</span><span class="d">Ambientes claros e impecáveis, movimentos calmos, o cuidado em close.</span></div>
+      </div>
+
+      <h3>🎥 Planos de câmera — o enquadramento de cada cena <span style="color:var(--soft);font-weight:400">(15)</span></h3>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Plano médio</span><span class="d">Da cintura pra cima — o equilíbrio padrão entre personagem e cena.</span></div>
+        <div class="ctrl"><span class="k">Plano americano</span><span class="d">Do meio da coxa pra cima (cowboy shot).</span></div>
+        <div class="ctrl"><span class="k">Close-up</span><span class="d">No rosto — emoção e expressão.</span></div>
+        <div class="ctrl"><span class="k">Plano perfil</span><span class="d">De lado (vista lateral).</span></div>
+        <div class="ctrl"><span class="k">Contra-plongée</span><span class="d">Câmera de baixo pra cima — passa <b>poder / grandiosidade</b>.</span></div>
+        <div class="ctrl"><span class="k">Plongée</span><span class="d">Câmera de cima pra baixo — <b>diminui / fragiliza</b> o personagem.</span></div>
+        <div class="ctrl"><span class="k">Over shoulder</span><span class="d">Por cima do ombro — o ponto de vista de alguém.</span></div>
+        <div class="ctrl"><span class="k">Over shoulder aberto</span><span class="d">OTS amplo, o ambiente domina o quadro.</span></div>
+        <div class="ctrl"><span class="k">Over shoulder fechado</span><span class="d">OTS colado, nuca/cabeça preenchem o quadro.</span></div>
+        <div class="ctrl"><span class="k">Plano panorâmico</span><span class="d">Ambiente amplo, personagem pequeno (establishing).</span></div>
+        <div class="ctrl"><span class="k">Hero shot</span><span class="d">Personagem centrado, pose épica e poderosa.</span></div>
+        <div class="ctrl"><span class="k">Plano zenital</span><span class="d">Visão reta de cima (bird's-eye / top-down).</span></div>
+        <div class="ctrl"><span class="k">Extreme close-up</span><span class="d">Fechadíssimo nos <b>olhos</b>.</span></div>
+        <div class="ctrl"><span class="k">Plano holandês</span><span class="d">Inclinado / diagonal — <b>tensão, desequilíbrio</b>.</span></div>
+        <div class="ctrl"><span class="k">Plano aberto (final)</span><span class="d">Plano geral épico — ótimo pro fecho da história.</span></div>
+      </div>
+
+      <div class="note tip"><span class="ic">🎬</span><div><span class="lbl">Como combinar</span>
+        Ex.: <b>Roteirista: Viral</b> + <b>Diretor: Food</b> = um roteiro de retenção com estética gastronômica.
+        Depois varie o <b>Plano de câmera</b> cena a cena (close no prato → panorâmico do salão) pra dar ritmo.</div></div>
+    </section>
+
+    <!-- ============ CONTA GROUP ============ -->
+    <div class="grpttl">Conta</div>
+
+    <section class="feat" id="plano">
+      <span class="kicker">Conta</span>
+      <h2><span class="em">💳</span>Plano &amp; Uso</h2>
+      <p class="what">Seu consumo do mês e a fatura estimada.</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Assinatura · Créditos</span><span class="d">O plano ativo e o saldo de créditos (geração de mídia).</span></div>
+        <div class="ctrl"><span class="k">Imagens · Vídeos</span><span class="d">Quantos você gerou no mês.</span></div>
+        <div class="ctrl"><span class="k">Redes conectadas</span><span class="d">Quantas redes ativas × cota local = custo de publicação.</span></div>
+        <div class="ctrl"><span class="k">Fatura estimada</span><span class="d">Assinatura + publicação = total do mês.</span></div>
+      </div>
+    </section>
+
+    <section class="feat" id="creditos">
+      <span class="kicker">Conta</span>
+      <h2><span class="em">💎</span>Créditos &amp; custos</h2>
+      <p class="what">Cada geração consome <b>créditos</b> (o custo aparece no botão/estimativa <b>antes</b> de gerar).
+        A ordem de grandeza:</p>
+      <div class="ctrls">
+        <div class="ctrl"><span class="k">Imagem</span><span class="d">O mais barato — base de tudo. O custo sobe com a resolução (1K → 2K → 4K).</span></div>
+        <div class="ctrl"><span class="k">Vídeo / clipe</span><span class="d">Mais caro que imagem; sobe com a duração (5s → 10s) e a qualidade.</span></div>
+        <div class="ctrl"><span class="k">Short (montagem) · Vídeo premium</span><span class="d">Os mais caros — juntam vários clipes + narração + montagem.</span></div>
+        <div class="ctrl"><span class="k">Narração (áudio)</span><span class="d">Baixo custo por cena.</span></div>
+        <div class="ctrl"><span class="k">Publicação</span><span class="d">Não usa créditos — é cobrada por rede conectada (cota local cada).</span></div>
+      </div>
+      <div class="note tip"><span class="ic">💡</span><div><span class="lbl">Dica pra economizar</span>
+        Feche o roteiro e as imagens em resolução menor primeiro; só suba a qualidade (2K/4K) quando o resultado
+        estiver aprovado. A prévia de custo/duração está sempre à vista pra você decidir.</div></div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap"><span class="mark">R</span> Manual do Reachyn — da ideia à publicação.
+    <br>18 roteiristas · 14 diretores · 15 planos de câmera detalhados no <a href="#catalogo">Catálogo criativo</a>.</div>
+</footer>
+
+<script>
+  (function(){
+    var btn=document.getElementById('themeBtn');
+    var root=document.documentElement;
+    function cur(){ if(root.dataset.theme) return root.dataset.theme;
+      return matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'; }
+    btn.addEventListener('click',function(){
+      root.dataset.theme = cur()==='dark'?'light':'dark';
+    });
+  })();
+</script>
+
+</body>
+</html>

@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,18 +16,49 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'tenant_id', 'role'])]
+#[Fillable(['name', 'email', 'password', 'organization_id', 'tenant_id', 'role'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
+/**
+ * Tipos pós-cast que o Larastan não infere do casts() (colunas json/jsonb/timestamp).
+ * @property array<string>|null $app_authentication_recovery_codes
+ */
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
+    /** Organização do usuário (dona do billing). Usuário acessa TODAS as marcas dela.
+     *
+     * @return BelongsTo<Organization, $this>
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
 
-    public function isOperator(): bool { return in_array($this->role, ['operator', 'admin'], true); }
+    /** Marca ATIVA/default do usuário (a sessão pode trocar para outra marca da mesma org).
+     *
+     * @return BelongsTo<Tenant, $this>
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 
-    /** admin = operador da plataforma; app = qualquer usuário de tenant. */
+    /** Marcas que o usuário pode acessar = todas as da sua org (fallback: só a marca default). */
+    public function accessibleTenants()
+    {
+        return $this->organization
+            ? $this->organization->tenants()->orderBy('name')->get()
+            : Tenant::whereKey($this->tenant_id)->get();
+    }
+
+    public function isOperator(): bool
+    {
+        return in_array($this->role, ['operator', 'admin'], true);
+    }
+
+    /** admin = operador RedFoxCode; app = qualquer usuário de tenant. */
     public function canAccessPanel(Panel $panel): bool
     {
         return $panel->getId() === 'admin' ? $this->isOperator() : true;
@@ -46,6 +77,8 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             // AUD-022: segredo TOTP e códigos de recuperação SEMPRE cifrados em repouso.
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
+            // S2: preferências de aviso por e-mail (opt-out; ausente = ligado).
+            'notify_prefs' => 'array',
         ];
     }
 

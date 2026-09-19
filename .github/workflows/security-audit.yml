@@ -63,6 +63,11 @@ jobs:
           severity: CRITICAL
           exit-code: "1"            # quebra o build se houver CRITICAL
           ignore-unfixed: true
+          # Pula deps de TERCEIROS já cobertas por composer/npm/osv (o osv-scanner varre
+          # composer.lock/package-lock/go.mod/requirements.txt de forma precisa). Sem isso o
+          # trivy pega arquivos incidentais dentro de vendor/ (ex.: um requirements.txt da DOC
+          # do mockery — dep PHP de DEV que nem entra na imagem `composer install --no-dev`).
+          skip-dirs: 'console/vendor,web/node_modules,engine/vendor,**/node_modules'
 
   # --------------------------------------------------------------- Segredos
   gitleaks:

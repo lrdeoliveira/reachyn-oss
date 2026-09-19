@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Páginas públicas de example.com. Uma entrada por arquivo servido pelo landing/Dockerfile:
+     ao adicionar uma página lá, adicione aqui — sitemap que omite página é pior que sitemap
+     nenhum, porque o buscador confia nele como lista completa. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://example.com/termos.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://example.com/privacidade.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://example.com/cookies.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://example.com/direitos.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://example.com/subprocessadores.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>

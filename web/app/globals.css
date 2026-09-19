@@ -1,11 +1,20 @@
 :root{
-  --bg:#141110; --bg2:#1d1815; --panel:#221c19; --panel2:#2a221e; --text:#efe7e2; --muted:#9d938b;
+  /* --muted subiu mais um degrau (#a89e96 → #b3a89e) — a letra estava fina/apagada demais
+     no tema escuro (2026-08-01): texto claro sobre fundo escuro perde peso visual, e o
+     `-webkit-font-smoothing:antialiased` abaixo ainda AFINA mais em WebKit/Chrome. */
+  --bg:#141110; --bg2:#1d1815; --panel:#221c19; --panel2:#2a221e; --text:#efe7e2; --muted:#b3a89e;
   --red:#e24a31; --red2:#b8321f; --peach:#ffb4a6; --line:#352d28; --line2:#473b34; --green:#3fb950; --amber:#e3a008;
   --radius:14px;
 }
 *{ box-sizing:border-box; }
 html,body{ margin:0; padding:0; background:var(--bg); color:var(--text);
-  font-family:Inter,system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.55; }
+  /* peso base 460 (não 400): letra clara sobre fundo escuro em 400 lê como fina/apagada —
+     é o mesmo motivo pelo qual removemos o antialiased abaixo. Cascata pra tudo que não
+     define o próprio font-weight (a maioria do texto secundário do app). */
+  font-family:Inter,system-ui,-apple-system,sans-serif; font-weight:460; line-height:1.55;
+  /* SEM antialiased: em WebKit/Chrome essa propriedade AFINA texto claro sobre fundo escuro —
+     o efeito contrário do que queremos aqui. `auto` deixa o SO escolher o hinting certo. */
+  -webkit-font-smoothing:auto; -moz-osx-font-smoothing:auto; }
 body{ background-image: radial-gradient(1200px 600px at 80% -10%, rgba(226,74,49,.06), transparent 60%); }
 a{ color:inherit; text-decoration:none; }
 ::-webkit-scrollbar{ width:9px; height:9px; } ::-webkit-scrollbar-track{ background:transparent; }
@@ -16,9 +25,9 @@ a{ color:inherit; text-decoration:none; }
 .side{ background:linear-gradient(180deg,#1b1613,#161210); border-right:1px solid var(--line); padding:22px 16px; display:flex; flex-direction:column; gap:2px; position:sticky; top:0; height:100vh; }
 .brand{ display:flex; align-items:center; gap:11px; font-weight:800; font-size:1.18rem; padding:4px 8px 22px; letter-spacing:-.02em; }
 .brand .dot{ width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,var(--red),var(--red2)); display:grid; place-items:center; color:#fff; font-size:1rem; box-shadow:0 4px 14px rgba(226,74,49,.4); }
-.navgroup{ font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:14px 10px 6px; opacity:.7; }
+.navgroup{ font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:14px 10px 6px; opacity:.85; }
 .nav{ display:flex; flex-direction:column; gap:3px; }
-.nav a{ display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:10px; color:var(--muted); font-weight:500; font-size:.93rem; transition:.16s; }
+.nav a{ display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:10px; color:var(--muted); font-weight:600; font-size:.93rem; transition:.16s; }
 .nav a:hover{ background:var(--panel); color:var(--text); }
 .nav a.active{ background:rgba(226,74,49,.14); color:var(--peach); box-shadow:inset 2px 0 0 var(--red); }
 .side .foot{ margin-top:auto; padding-top:14px; border-top:1px solid var(--line); }
@@ -31,7 +40,7 @@ a{ color:inherit; text-decoration:none; }
 .sub{ color:var(--muted); margin:0 0 30px; font-size:1.02rem; }
 
 /* Grid / cards */
-.grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:18px; }
+.grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr)); gap:18px; }
 .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; box-shadow:0 1px 0 rgba(255,255,255,.02), 0 6px 24px rgba(0,0,0,.18); }
 .card .media{ aspect-ratio:16/9; background:var(--bg2); object-fit:cover; width:100%; }
 .card .body{ padding:16px; flex:1; display:flex; flex-direction:column; gap:8px; }
@@ -50,10 +59,126 @@ a{ color:inherit; text-decoration:none; }
 .btn.no{ background:transparent; color:var(--muted); border:1px solid var(--line); }
 .btn.no:hover{ color:#ff9b8a; border-color:var(--red2); }
 
+/* S4: chip/pill de filtro-toggle — antes cada tela redefinia o seu inline. */
+.chip{ padding:6px 13px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--muted); cursor:pointer; font-size:.83rem; font-family:inherit; white-space:nowrap; transition:.16s; }
+.chip:hover{ color:var(--text); border-color:var(--line2); }
+.chip.on{ border-color:var(--green); color:var(--green); background:color-mix(in srgb, var(--green) 14%, transparent); font-weight:700; }
+
 .empty{ border:1px dashed var(--line2); border-radius:var(--radius); padding:52px; text-align:center; color:var(--muted); background:var(--bg2); }
 .badge{ display:inline-block; background:rgba(227,160,8,.15); color:var(--amber); padding:3px 10px; border-radius:20px; font-size:.74rem; font-weight:700; }
 .err{ background:rgba(226,74,49,.1); border:1px solid var(--red); border-radius:10px; padding:14px 16px; color:var(--peach); font-size:.9rem; margin-bottom:20px; }
 .txt{ color:#cabfb8; font-size:.95rem; line-height:1.6; }
 input:focus,textarea:focus{ outline:none; border-color:var(--red) !important; }
+/* S4/a11y: o outline nativo era removido sem substituto — navegação por teclado ficava invisível.
+   :focus-visible devolve um anel visível SÓ no teclado (clique do mouse não ganha anel). */
+:focus-visible{ outline:2px solid var(--peach); outline-offset:2px; border-radius:4px; }
+input:focus-visible,textarea:focus-visible,select:focus-visible{ outline:2px solid var(--red); outline-offset:1px; }
 
-@media (max-width:820px){ .app{ grid-template-columns:1fr; } .side{ position:static; height:auto; flex-direction:row; flex-wrap:wrap; } .main{ padding:24px; } }
+/* ───────── Kit de feedback (S1 · PLANO-UX-INTERFACE) ───────── */
+
+/* Toasts — feedback global (substitui alert() e msg de rodapé pra eventos entre telas) */
+.toasts{ position:fixed; right:18px; bottom:18px; z-index:120; display:flex; flex-direction:column; gap:10px; max-width:min(380px,calc(100vw - 32px)); }
+.toast{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:var(--panel2);
+  border:1px solid var(--line2); box-shadow:0 10px 30px rgba(0,0,0,.4); font-size:.88rem; animation:toast-in .18s ease; }
+.toast.ok{ border-color:rgba(63,185,80,.5); } .toast.ok .toast-txt::before{ content:"✅ "; }
+.toast.err{ border-color:var(--red); } .toast.err .toast-txt::before{ content:"❌ "; }
+.toast.info .toast-txt::before{ content:"💬 "; }
+.toast-txt{ flex:1; min-width:0; }
+.toast-act{ flex:none; background:linear-gradient(135deg,var(--red),var(--red2)); color:#fff; border:0; border-radius:8px;
+  padding:6px 12px; font-weight:700; font-size:.8rem; cursor:pointer; font-family:inherit; }
+.toast-x{ flex:none; background:none; border:0; color:var(--muted); font-size:1.05rem; cursor:pointer; padding:0 2px; line-height:1; }
+@keyframes toast-in{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none; } }
+
+/* Spinner + Skeleton — o app não tinha NENHUM indicador animado de carregamento */
+.spinner{ display:inline-block; border:2px solid var(--line2); border-top-color:var(--peach); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.skeleton{ background:linear-gradient(90deg,var(--bg2) 25%,var(--panel2) 50%,var(--bg2) 75%); background-size:200% 100%; animation:shimmer 1.3s ease infinite; }
+@keyframes shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
+
+/* Modal acessível (chassi compartilhado) */
+.modal-overlay{ position:fixed; inset:0; z-index:110; background:rgba(0,0,0,.6); display:grid; place-items:center; padding:18px; }
+.modal-box{ width:100%; max-height:92dvh; overflow:auto; background:var(--panel); border:1px solid var(--line2); border-radius:var(--radius); padding:18px; outline:none; box-shadow:0 18px 60px rgba(0,0,0,.5); }
+
+/* 🔔 Central de tarefas (sidebar) */
+.jobs-bell{ position:relative; margin:6px 0 2px; }
+.jobs-btn{ display:flex; align-items:center; gap:9px; width:100%; background:var(--panel); border:1px solid var(--line2); color:var(--text);
+  cursor:pointer; font-size:.86rem; font-weight:600; padding:9px 12px; border-radius:10px; font-family:inherit; transition:.16s; }
+.jobs-btn:hover{ background:var(--panel2); }
+.jobs-badge{ margin-left:auto; background:linear-gradient(135deg,var(--red),var(--red2)); color:#fff; font-size:.7rem; font-weight:800;
+  min-width:19px; height:19px; border-radius:999px; display:grid; place-items:center; padding:0 5px; }
+.jobs-badge.ok{ background:rgba(63,185,80,.25); color:var(--green); }
+.jobs-panel{ position:absolute; bottom:calc(100% + 8px); left:0; width:min(320px,78vw); z-index:90; background:var(--panel2);
+  border:1px solid var(--line2); border-radius:12px; box-shadow:0 14px 44px rgba(0,0,0,.5); padding:10px; display:flex; flex-direction:column; gap:6px; }
+.jobs-head{ display:flex; align-items:center; justify-content:space-between; padding:2px 4px 6px; font-size:.85rem; }
+.jobs-clear{ background:none; border:0; color:var(--muted); font-size:.72rem; cursor:pointer; font-family:inherit; }
+.jobs-clear:hover{ color:var(--peach); }
+.jobs-item{ display:flex; align-items:center; gap:9px; padding:7px 8px; border-radius:9px; background:var(--panel); font-size:.82rem; }
+.jobs-dot{ flex:none; width:8px; height:8px; border-radius:50%; }
+.jobs-item.running .jobs-dot{ background:var(--amber); animation:pulse 1.4s ease infinite; }
+.jobs-item.done .jobs-dot{ background:var(--green); }
+.jobs-item.failed .jobs-dot{ background:var(--red); }
+.jobs-label{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.jobs-meta{ color:var(--muted); font-size:.72rem; }
+.jobs-go{ flex:none; color:var(--green); font-weight:700; font-size:.78rem; }
+.jobs-x{ flex:none; background:none; border:0; color:var(--muted); cursor:pointer; font-size:1rem; line-height:1; padding:0 2px; }
+@keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+/* Barra superior mobile + backdrop do drawer — ocultos no desktop */
+.topbar{ display:none; }
+.backdrop{ display:none; }
+
+/* S4/mobile: degrau intermediário — telas médias (tablet/notebook estreito) respiram melhor. */
+@media (max-width:1024px){
+  .main{ padding:32px 24px; }
+}
+
+@media (max-width:820px){
+  .app{ grid-template-columns:1fr; }
+
+  /* Barra superior fixa com o botão de menu (hambúrguer) */
+  .topbar{
+    display:flex; align-items:center; gap:12px;
+    position:sticky; top:0; z-index:50;
+    padding:11px 16px;
+    background:linear-gradient(180deg,#1b1613,#161210);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .menu-btn{
+    display:grid; place-items:center; width:40px; height:40px; flex:0 0 auto;
+    background:var(--panel); border:1px solid var(--line2); border-radius:10px;
+    color:var(--text); cursor:pointer; padding:0;
+  }
+  .topbar .menu-btn:hover{ background:var(--panel2); }
+  .topbar .brand{ padding:0; font-size:1.05rem; }
+
+  /* Sidebar vira um drawer que desliza da esquerda */
+  .side{
+    position:fixed; top:0; left:0; bottom:0; z-index:60;
+    width:min(84vw,300px); height:100dvh;
+    flex-direction:column; flex-wrap:nowrap;
+    overflow-y:auto; overscroll-behavior:contain;
+    transform:translateX(-100%);
+    transition:transform .22s ease;
+    box-shadow:0 0 40px rgba(0,0,0,.55);
+  }
+  .side.open{ transform:translateX(0); }
+
+  /* Fundo escurecido: fecha o menu ao tocar fora */
+  .backdrop{ display:block; position:fixed; inset:0; z-index:55; background:rgba(0,0,0,.55); }
+
+  .main{ padding:24px 16px; }
+}
+
+/* 🎞️ Movies (.mv): o .btn base tem flex:1 (pros .acts dos cards) — na aba Movies os botões
+   vivem em flex livres e esticavam a tela inteira; selects longos estouravam o grid. */
+.mv .btn{ flex:0 0 auto; }
+.mv select{ width:100%; max-width:100%; min-width:0; }
+.mv label{ min-width:0; }
+
+/* 🎬 Malha de seleção do storyboard: as células ficam INVISÍVEIS sobre a arte e só se revelam no
+   hover/seleção. O tracejado permanente que havia aqui era lido como defeito da imagem gerada
+   ("apareceu pontilhado no storyboard") — e, quando a grade gravada não batia com a desenhada,
+   ainda cortava os quadros ao meio. O número do painel já basta como pista de onde clicar. */
+.board-cell{ border:1px solid transparent; background:transparent; transition:border-color .12s, background .12s; }
+.board-cell:hover:not(:disabled){ border-color:rgba(255,255,255,.45); background:rgba(255,255,255,.06); }
+.board-cell.sel{ border:2px solid var(--red); background:rgba(226,74,49,.18); }
