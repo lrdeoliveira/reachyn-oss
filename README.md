@@ -8,6 +8,8 @@ Os **provedores de IA** (LLM, imagem, vídeo, voz, rerank, busca) são **plugáv
 configurados por variáveis de ambiente** — o código não fixa nenhum fornecedor. Veja
 `.env.example` para a lista de chaves esperadas.
 
+**IA / agente:** leia [`AGENTS.md`](AGENTS.md) antes de editar. Mapa curto: [`docs/agents/`](docs/agents/README.md).
+
 ## Estrutura
 
 | Pasta | Stack | Papel |
@@ -42,8 +44,8 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Arquitetura
 
-- O **engine** é **interno** (sem porta publicada): só `console` e `web` o chamam por
-  `engine:8080` na rede `reachyn-net`.
+- O **engine** é **interno** (sem porta publicada): só o `console` o chama por
+  `engine:8080` na rede `reachyn-net`. O Studio (`web`) fala **só** com o console.
 - O **console** em produção roda **nginx + php-fpm** sob supervisor (configs em
   `console/docker/`, non-root); o **dev** usa `php artisan serve` via override no
   `docker-compose.dev.yml`.
